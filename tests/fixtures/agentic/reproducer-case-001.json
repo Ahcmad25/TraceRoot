@@ -1,0 +1,23 @@
+{
+  "hypothesisId": "hyp-1",
+  "request": {
+    "method": "POST",
+    "path": "/api/users/register",
+    "body": {
+      "objectEntries": [
+        {
+          "key": "email",
+          "value": "ada@example.test"
+        }
+      ]
+    }
+  },
+  "expected": {
+    "supporting": {
+      "logContains": [
+        "USER_REGISTRATION_UNHANDLED"
+      ]
+    }
+  },
+  "reason": "Exercise the reported email-only registration request and compare its correlated failure log."
+}

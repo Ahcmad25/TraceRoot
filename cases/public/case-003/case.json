@@ -1,0 +1,22 @@
+{
+  "id": "case-003",
+  "title": "Order total calculation failure",
+  "failureReport": {
+    "summary": "Order total calculation returns HTTP 500 when quantity arrives as a numeric string.",
+    "endpoint": "/api/orders/total",
+    "method": "POST",
+    "observedStatus": 500,
+    "observedError": "order total calculation failed",
+    "requestContext": {
+      "body": { "unitPrice": 10, "quantity": "2" }
+    }
+  },
+  "permittedSourceFiles": [
+    "src/target-api/application-data.ts",
+    "src/target-api/scenarios/account-lookup.ts",
+    "src/target-api/scenarios/order-total.ts",
+    "src/target-api/scenarios/payment-provider.ts",
+    "src/target-api/scenarios/user-registration.ts"
+  ],
+  "initialLogFiles": ["cases/public/case-003/app.log"]
+}

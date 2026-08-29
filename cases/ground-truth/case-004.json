@@ -1,0 +1,13 @@
+{
+  "caseId": "case-004",
+  "category": "data-access",
+  "sourceFile": "src/target-api/scenarios/account-lookup.ts",
+  "symbol": "findAccountByExternalId",
+  "causalMechanism": "findAccountByExternalId compares the supplied external ID with account.id rather than account.externalId, so an existing account is treated as missing.",
+  "expectedFailure": {
+    "status": 500,
+    "bodyContains": "account resolution failed",
+    "logContains": ["ACCOUNT_LOOKUP_RETURNED_NO_RESULT", "AUDIT_PIPELINE_FATAL_DELIVERY_FAILURE"]
+  },
+  "notes": "The audit sink error is a secondary failure on the error-reporting path and is intentionally louder than the true lookup defect."
+}

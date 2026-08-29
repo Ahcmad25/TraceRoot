@@ -1,0 +1,2 @@
+INFO trace-prod-2001 REQUEST_RECEIVED method=GET path=/api/payments/provider
+ERROR trace-prod-2001 PAYMENT_CLIENT_CONFIGURATION_MISSING key=PAYMENT_API_KEY

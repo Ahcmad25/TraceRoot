@@ -1,0 +1,39 @@
+{
+  "name": "traceroot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agentic API failure investigator for backend developers",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "target": "tsx src/cli.ts target",
+    "case": "tsx src/cli.ts case",
+    "tool:search-source": "tsx src/cli.ts tool:search-source",
+    "tool:read-source": "tsx src/cli.ts tool:read-source",
+    "tool:search-logs": "tsx src/cli.ts tool:search-logs",
+    "tool:reproduce": "tsx src/cli.ts tool:reproduce",
+    "baseline": "tsx src/cli.ts baseline",
+    "baseline:all": "tsx src/cli.ts baseline:all",
+    "investigate": "tsx src/cli.ts investigate"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.3.0",
+    "@types/supertest": "^6.0.3",
+    "ajv": "^8.20.0",
+    "supertest": "^7.1.4",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

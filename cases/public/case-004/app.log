@@ -1,0 +1,3 @@
+INFO trace-prod-4001 REQUEST_RECEIVED method=GET path=/api/accounts/ext-42
+WARN trace-prod-4001 ACCOUNT_LOOKUP_RETURNED_NO_RESULT externalId=ext-42
+ERROR trace-prod-4001 AUDIT_PIPELINE_FATAL_DELIVERY_FAILURE message="audit sink connection refused"

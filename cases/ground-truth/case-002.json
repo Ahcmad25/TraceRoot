@@ -1,0 +1,13 @@
+{
+  "caseId": "case-002",
+  "category": "configuration",
+  "sourceFile": "src/target-api/scenarios/payment-provider.ts",
+  "symbol": "createPaymentClient",
+  "causalMechanism": "createPaymentClient reads PAYMENT_API_KEY, while deterministic seed state defines PAYMENTS_API_KEY with an extra S.",
+  "expectedFailure": {
+    "status": 503,
+    "bodyContains": "payment provider unavailable",
+    "logContains": ["PAYMENT_CLIENT_CONFIGURATION_MISSING", "PAYMENT_API_KEY"]
+  },
+  "notes": "The provider is never contacted; the failure is caused by a local configuration-key mismatch."
+}

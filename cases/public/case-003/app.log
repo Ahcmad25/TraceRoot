@@ -1,0 +1,2 @@
+INFO trace-prod-3001 REQUEST_RECEIVED method=POST path=/api/orders/total
+ERROR trace-prod-3001 ORDER_TOTAL_INVALID_TYPE unitPriceType=number quantityType=string computedType=string computedValue=102

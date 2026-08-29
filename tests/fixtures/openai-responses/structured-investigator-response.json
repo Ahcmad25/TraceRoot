@@ -1,0 +1,40 @@
+{
+  "id": "resp_sanitized_smoke",
+  "object": "response",
+  "status": "completed",
+  "error": null,
+  "incomplete_details": null,
+  "output": [
+    {
+      "id": "rs_sanitized",
+      "type": "reasoning",
+      "summary": []
+    },
+    {
+      "id": "msg_sanitized",
+      "type": "message",
+      "status": "completed",
+      "role": "assistant",
+      "phase": "final",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "text": "{\"action\":\"search_source\",\"arguments\":{\"query\":\"registerUser\"},\"reason\":\"Locate the request handler.\"}"
+        }
+      ]
+    }
+  ],
+  "output_text": "{\"action\":\"search_source\",\"arguments\":{\"query\":\"registerUser\"},\"reason\":\"Locate the request handler.\"}",
+  "usage": {
+    "input_tokens": 120,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    },
+    "output_tokens": 28,
+    "output_tokens_details": {
+      "reasoning_tokens": 8
+    },
+    "total_tokens": 148
+  }
+}

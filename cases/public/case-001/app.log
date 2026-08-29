@@ -1,0 +1,2 @@
+INFO trace-prod-1001 REQUEST_RECEIVED method=POST path=/api/users/register
+ERROR trace-prod-1001 USER_REGISTRATION_UNHANDLED message="Cannot read properties of undefined (reading 'name')"

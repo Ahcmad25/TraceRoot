@@ -1,0 +1,22 @@
+{
+  "id": "case-001",
+  "title": "User registration failure",
+  "failureReport": {
+    "summary": "User registration returns HTTP 500 for a request containing only an email address.",
+    "endpoint": "/api/users/register",
+    "method": "POST",
+    "observedStatus": 500,
+    "observedError": "user registration failed",
+    "requestContext": {
+      "body": { "email": "ada@example.test" }
+    }
+  },
+  "permittedSourceFiles": [
+    "src/target-api/application-data.ts",
+    "src/target-api/scenarios/account-lookup.ts",
+    "src/target-api/scenarios/order-total.ts",
+    "src/target-api/scenarios/payment-provider.ts",
+    "src/target-api/scenarios/user-registration.ts"
+  ],
+  "initialLogFiles": ["cases/public/case-001/app.log"]
+}

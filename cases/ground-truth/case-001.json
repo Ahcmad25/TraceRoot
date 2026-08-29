@@ -1,0 +1,13 @@
+{
+  "caseId": "case-001",
+  "category": "input-validation",
+  "sourceFile": "src/target-api/scenarios/user-registration.ts",
+  "symbol": "registerUser",
+  "causalMechanism": "registerUser dereferences request.body.profile.name before validating that profile and name exist.",
+  "expectedFailure": {
+    "status": 500,
+    "bodyContains": "user registration failed",
+    "logContains": ["USER_REGISTRATION_UNHANDLED", "reading 'name'"]
+  },
+  "notes": "The missing nested object is the root cause, not Express JSON parsing."
+}

@@ -1,0 +1,20 @@
+{
+  "id": "case-004",
+  "title": "Account lookup failure",
+  "failureReport": {
+    "summary": "Looking up an existing account by external ID returns HTTP 500.",
+    "endpoint": "/api/accounts/ext-42",
+    "method": "GET",
+    "observedStatus": 500,
+    "observedError": "account resolution failed",
+    "requestContext": { "externalId": "ext-42" }
+  },
+  "permittedSourceFiles": [
+    "src/target-api/application-data.ts",
+    "src/target-api/scenarios/account-lookup.ts",
+    "src/target-api/scenarios/order-total.ts",
+    "src/target-api/scenarios/payment-provider.ts",
+    "src/target-api/scenarios/user-registration.ts"
+  ],
+  "initialLogFiles": ["cases/public/case-004/app.log"]
+}

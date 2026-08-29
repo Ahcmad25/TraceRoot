@@ -1,0 +1,20 @@
+{
+  "id": "case-002",
+  "title": "Payment provider availability failure",
+  "failureReport": {
+    "summary": "The payment provider health route returns HTTP 503 in a seeded sandbox environment.",
+    "endpoint": "/api/payments/provider",
+    "method": "GET",
+    "observedStatus": 503,
+    "observedError": "payment provider unavailable",
+    "requestContext": {}
+  },
+  "permittedSourceFiles": [
+    "src/target-api/application-data.ts",
+    "src/target-api/scenarios/account-lookup.ts",
+    "src/target-api/scenarios/order-total.ts",
+    "src/target-api/scenarios/payment-provider.ts",
+    "src/target-api/scenarios/user-registration.ts"
+  ],
+  "initialLogFiles": ["cases/public/case-002/app.log"]
+}

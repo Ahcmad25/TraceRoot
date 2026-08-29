@@ -1,0 +1,22 @@
+{
+  "action": "propose_hypotheses",
+  "arguments": {
+    "hypotheses": [
+      {
+        "id": "hypothesis-1",
+        "statement": "The optional profile is dereferenced before validation.",
+        "faultCategory": "input-validation",
+        "suspectedFile": "src/target-api/scenarios/user-registration.ts",
+        "suspectedSymbol": "registerUser",
+        "mechanism": "An email-only request has no profile, but profile.name is dereferenced.",
+        "supportingEvidenceIds": [
+          "evidence-source-1"
+        ],
+        "contradictingEvidenceIds": [],
+        "confidence": 0.95,
+        "verificationPlan": "Reproduce registration with an email-only request."
+      }
+    ]
+  },
+  "reason": "Source evidence supports a concrete hypothesis."
+}

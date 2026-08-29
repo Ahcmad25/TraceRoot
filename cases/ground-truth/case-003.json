@@ -1,0 +1,13 @@
+{
+  "caseId": "case-003",
+  "category": "type-coercion",
+  "sourceFile": "src/target-api/scenarios/order-total.ts",
+  "symbol": "calculateOrderTotal",
+  "causalMechanism": "calculateOrderTotal uses the plus operator without converting the string quantity, producing the string 102 instead of numeric 12.",
+  "expectedFailure": {
+    "status": 500,
+    "bodyContains": "order total calculation failed",
+    "logContains": ["ORDER_TOTAL_INVALID_TYPE", "computedType"]
+  },
+  "notes": "The TypeScript assertion changes only the static type and does not convert the runtime value."
+}
