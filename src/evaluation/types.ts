@@ -111,11 +111,21 @@ export interface EvaluationSummary {
 
 export interface HumanReviewItem {
   readonly blindId: string;
-  readonly caseId: string;
+  readonly reviewCaseId: string;
   readonly repetition: number;
   readonly groundTruthMechanism: string;
   readonly candidateMechanism: string;
-  readonly supportingEvidenceReferences: readonly string[];
+  readonly supportingEvidence: readonly {
+    readonly label: string;
+    readonly kind: "report" | "source" | "log";
+    readonly excerpt: string;
+  }[];
   readonly mechanismCorrect: null;
   readonly reviewerNotes: "";
+}
+
+export interface HumanReviewSet {
+  readonly schemaVersion: "human-review-set-v2";
+  readonly reviewSetSeed: string;
+  readonly items: readonly HumanReviewItem[];
 }

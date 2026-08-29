@@ -5,7 +5,7 @@ import { OpenAiResponsesProvider } from "../llm/openai-responses-provider.js";
 import type { LlmConfiguration } from "../llm/types.js";
 import { collectAttempts } from "./attempt-store.js";
 import { createCredentialedAttemptExecutor, runEvaluationAttempts } from "./execution-runner.js";
-import { createHumanReviewItems, writeEvaluationReports } from "./report.js";
+import { createHumanReviewSet, writeEvaluationReports } from "./report.js";
 import { evaluateAttempts } from "./runner.js";
 import type { EvaluationMode } from "./types.js";
 
@@ -62,7 +62,12 @@ async function main(): Promise<void> {
   const attempts = await collectAttempts(workspaceRoot, caseIds, repetitions);
   const evaluated = await evaluateAttempts({ workspaceRoot, attempts });
   const mechanisms = new Map([...evaluated.truths].map(([caseId, truth]) => [caseId, truth.causalMechanism]));
-  const humanReview = createHumanReviewItems(evaluated.candidates, mechanisms);
+  const humanReview = await createHumanReviewSet({
+    workspaceRoot,
+    candidates: evaluated.candidates,
+    mechanisms,
+    reviewSetSeed: "traceroot-review-set-2026-08-29-v1",
+  });
   const paths = await writeEvaluationReports({ workspaceRoot, summary: evaluated.summary, humanReview });
   console.log(JSON.stringify({ dryRun: false, plannedSlots, completedScores: evaluated.summary.scores.length, failedAttempts: evaluated.summary.failedAttempts.length, fairnessIssues: evaluated.summary.fairnessIssues, paths }, null, 2));
 }

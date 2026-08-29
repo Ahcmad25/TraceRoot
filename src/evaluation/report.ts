@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { ArtifactLoader } from "../artifacts/loader.js";
 import { canonicalJson } from "../baseline/serializer.js";
-import type { CandidateRun, EvaluationSummary, HumanReviewItem } from "./types.js";
+import type { CandidateRun, EvaluationSummary, HumanReviewItem, HumanReviewSet } from "./types.js";
 
 function secrets(environment: NodeJS.ProcessEnv): readonly string[] {
   return Object.entries(environment)
@@ -77,23 +78,91 @@ export function renderSummaryMarkdown(summary: EvaluationSummary): string {
   return `${lines.join("\n")}\n`;
 }
 
-export function createHumanReviewItems(candidates: readonly CandidateRun[], mechanisms: ReadonlyMap<string, string>): readonly HumanReviewItem[] {
-  return candidates.map((candidate) => Object.freeze({
-    blindId: createHash("sha256").update(`traceroot-review:${candidate.caseId}:${candidate.repetition}:${candidate.mode}`).digest("hex").slice(0, 16),
-    caseId: candidate.caseId,
-    repetition: candidate.repetition,
-    groundTruthMechanism: mechanisms.get(candidate.caseId) ?? "",
-    candidateMechanism: candidate.diagnosis.causalMechanism,
-    supportingEvidenceReferences: Object.freeze([...candidate.diagnosis.evidenceIds]),
-    mechanismCorrect: null,
-    reviewerNotes: "",
-  })).sort((left, right) => left.blindId.localeCompare(right.blindId));
+const digest = (value: string): string => createHash("sha256").update(value).digest("hex");
+
+function neutralizeExcerpt(value: string): string {
+  return value
+    .replace(/\b(?:trace|repro)-[a-zA-Z0-9._-]+\b/gu, "[request]")
+    .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/giu, "[id]")
+    .trim();
+}
+
+function sourceExcerpt(content: string, symbol: string): string | null {
+  const lines = content.split(/\r?\n/u);
+  const found = lines.findIndex((line) => line.includes(symbol));
+  if (found < 0) return null;
+  return lines.slice(Math.max(0, found - 2), Math.min(lines.length, found + 10)).join("\n").trim();
+}
+
+export async function createHumanReviewSet(input: {
+  workspaceRoot: string;
+  candidates: readonly CandidateRun[];
+  mechanisms: ReadonlyMap<string, string>;
+  reviewSetSeed: string;
+}): Promise<HumanReviewSet> {
+  if (input.reviewSetSeed.trim() === "") throw new Error("Human-review seed must not be empty");
+  const artifactsByCase = new Map<string, Awaited<ReturnType<ArtifactLoader["load"]>>>();
+  const drafts: Array<Omit<HumanReviewItem, "blindId"> & { readonly shuffleKey: string }> = [];
+  for (const candidate of input.candidates) {
+    let loaded = artifactsByCase.get(candidate.caseId);
+    if (loaded === undefined) {
+      loaded = await new ArtifactLoader(input.workspaceRoot).load(candidate.caseId);
+      artifactsByCase.set(candidate.caseId, loaded);
+    }
+    if (!loaded.ok) throw new Error(`Unable to load public review evidence for ${candidate.caseId}`);
+    const normalizedSourcePath = candidate.diagnosis.sourceFile.trim().replaceAll("\\", "/").replace(/^\.\//u, "").toLocaleLowerCase("en-US");
+    const source = loaded.artifacts.sources.find((artifact) => artifact.path.toLocaleLowerCase("en-US") === normalizedSourcePath);
+    const excerpt = source === undefined ? null : sourceExcerpt(source.content, candidate.diagnosis.symbol.trim());
+    const evidence: HumanReviewItem["supportingEvidence"] = Object.freeze([
+      Object.freeze({ label: "evidence-1", kind: "report" as const, excerpt: neutralizeExcerpt(canonicalJson(loaded.artifacts.manifest.failureReport)) }),
+      ...(excerpt === null ? [] : [Object.freeze({ label: "evidence-2", kind: "source" as const, excerpt: neutralizeExcerpt(excerpt) })]),
+      Object.freeze({ label: excerpt === null ? "evidence-2" : "evidence-3", kind: "log" as const, excerpt: neutralizeExcerpt(loaded.artifacts.logs.map((artifact) => artifact.content).join("\n")) }),
+    ]);
+    const reviewCaseId = `review-case-${digest(`${input.reviewSetSeed}:case:${candidate.caseId}`).slice(0, 10)}`;
+    const contentKey = canonicalJson({
+      reviewCaseId,
+      repetition: candidate.repetition,
+      groundTruthMechanism: input.mechanisms.get(candidate.caseId) ?? "",
+      candidateMechanism: candidate.diagnosis.causalMechanism,
+      evidence,
+    });
+    drafts.push({
+      reviewCaseId,
+      repetition: candidate.repetition,
+      groundTruthMechanism: input.mechanisms.get(candidate.caseId) ?? "",
+      candidateMechanism: candidate.diagnosis.causalMechanism,
+      supportingEvidence: evidence,
+      mechanismCorrect: null,
+      reviewerNotes: "",
+      shuffleKey: digest(`${input.reviewSetSeed}:item:${contentKey}`),
+    });
+  }
+  const items = drafts
+    .sort((left, right) => left.shuffleKey.localeCompare(right.shuffleKey))
+    .map(({ shuffleKey: _shuffleKey, ...item }, index) => Object.freeze({ blindId: `review-item-${String(index + 1).padStart(3, "0")}`, ...item }));
+  return Object.freeze({
+    schemaVersion: "human-review-set-v2",
+    reviewSetSeed: input.reviewSetSeed,
+    items: Object.freeze(items),
+  });
+}
+
+export async function writeHumanReviewArtifact(input: {
+  workspaceRoot: string;
+  humanReview: HumanReviewSet;
+  environment?: NodeJS.ProcessEnv;
+}): Promise<string> {
+  const reviewRoot = resolve(input.workspaceRoot, "results", "evaluation", "human-review");
+  await mkdir(reviewRoot, { recursive: true });
+  const destination = resolve(reviewRoot, "items.json");
+  await atomicWrite(destination, `${canonicalJson(redact(input.humanReview, secrets(input.environment ?? process.env)))}\n`);
+  return destination;
 }
 
 export async function writeEvaluationReports(input: {
   workspaceRoot: string;
   summary: EvaluationSummary;
-  humanReview: readonly HumanReviewItem[];
+  humanReview: HumanReviewSet;
   environment?: NodeJS.ProcessEnv;
 }): Promise<{ summaryJson: string; summaryMarkdown: string; humanReview: string }> {
   const root = resolve(input.workspaceRoot, "results", "evaluation");

@@ -6,7 +6,7 @@ import type { GroundTruth } from "../../src/domain/case.js";
 import type { Diagnosis } from "../../src/domain/diagnosis.js";
 import { loadSlotAttempts, writeAttempt } from "../../src/evaluation/attempt-store.js";
 import { runEvaluationAttempts, withFreshTarget } from "../../src/evaluation/execution-runner.js";
-import { createHumanReviewItems, renderSummaryMarkdown, writeEvaluationReports } from "../../src/evaluation/report.js";
+import { createHumanReviewSet, renderSummaryMarkdown, writeEvaluationReports } from "../../src/evaluation/report.js";
 import { evaluateAttempts, fairnessIssues } from "../../src/evaluation/runner.js";
 import { aggregateScores, scoreCandidate } from "../../src/evaluation/scorer.js";
 import type { CandidateRun, DeterministicScore, EvaluationAttempt, EvaluationSummary } from "../../src/evaluation/types.js";
@@ -189,17 +189,32 @@ describe("Phase 5 deterministic evaluation", () => {
         meanToolCalls: 2, meanInvestigationRounds: 1, meanReproductionAttempts: 1, meanTotalTokens: 0, meanDurationMs: 0,
       },
     };
-    const review = createHumanReviewItems([candidate("baseline"), candidate("agentic")], new Map([["case-001", truth.causalMechanism]]));
+    const review = await createHumanReviewSet({
+      workspaceRoot: resolve("."),
+      candidates: [candidate("baseline"), candidate("agentic")],
+      mechanisms: new Map([["case-001", truth.causalMechanism]]),
+      reviewSetSeed: "test-review-seed-v1",
+    });
     const reviewText = JSON.stringify(review);
-    expect(reviewText).not.toContain('"mode"');
-    expect(reviewText).not.toContain("same-model");
-    expect(reviewText).not.toContain("result.json");
-    expect(review[0]).toMatchObject({
+    expect(reviewText.toLocaleLowerCase("en-US")).not.toMatch(/"mode"|baseline|agentic|runid|same-model|result\.json|search_source|read_source|search_logs|execute_reproduction|repro-|trace-prod/iu);
+    expect(reviewText).not.toMatch(/evidence-[0-9a-f]{8}-[0-9a-f-]{27,}/iu);
+    expect(reviewText).not.toMatch(/report:case-|source:src\/|log:cases\//iu);
+    expect(review.items[0]).toMatchObject({
       groundTruthMechanism: truth.causalMechanism,
       candidateMechanism: diagnosis.causalMechanism,
       mechanismCorrect: null,
       reviewerNotes: "",
     });
+    expect(review.items[0]?.reviewCaseId).not.toContain("case-001");
+    expect(review.items[0]?.supportingEvidence.map((item) => item.label)).toEqual(["evidence-1", "evidence-2", "evidence-3"]);
+    expect(review.items[0]?.supportingEvidence).toEqual(review.items[1]?.supportingEvidence);
+    const reordered = await createHumanReviewSet({
+      workspaceRoot: resolve("."),
+      candidates: [candidate("agentic"), candidate("baseline")],
+      mechanisms: new Map([["case-001", truth.causalMechanism]]),
+      reviewSetSeed: "test-review-seed-v1",
+    });
+    expect(reordered).toEqual(review);
     expect(renderSummaryMarkdown(summary)).toContain("Baseline mean");
 
     const paths = await writeEvaluationReports({ workspaceRoot: root, summary, humanReview: review, environment: { OPENAI_API_KEY: secret } });
