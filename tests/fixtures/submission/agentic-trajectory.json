@@ -1,0 +1,253 @@
+{
+  "schemaVersion": "agentic-trajectory-v3",
+  "runId": "fixture-run",
+  "caseId": "case-001",
+  "promptVersions": {
+    "investigator": "investigator-v1",
+    "reproducer": "reproducer-v2",
+    "verifier": "verifier-v2"
+  },
+  "aggregateArtifactHash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "investigation": {
+    "investigationId": "fixture-investigation",
+    "caseId": "case-001",
+    "mode": "agentic",
+    "status": "completed",
+    "failureReport": {
+      "summary": "An example request returns HTTP 500 when a nested field is absent.",
+      "endpoint": "/api/example",
+      "method": "POST",
+      "observedStatus": 500,
+      "observedError": "example request failed",
+      "requestContext": {
+        "body": {
+          "email": "example@example.test"
+        }
+      }
+    },
+    "evidence": [
+      {
+        "id": "report-observation",
+        "kind": "report",
+        "origin": "fixture-loader",
+        "locator": "fixture-report",
+        "content": "The example request returns HTTP 500 when a nested field is absent.",
+        "collectedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": "source-observation",
+        "kind": "source",
+        "origin": "read_source",
+        "locator": "src/example.ts:1-4",
+        "content": "export function handleExample(body: { profile: { name: string } }) { return body.profile.name.trim(); }",
+        "collectedAt": "2026-01-01T00:00:00.100Z"
+      },
+      {
+        "id": "http-observation",
+        "kind": "http",
+        "origin": "execute_reproduction",
+        "locator": "POST /api/example",
+        "content": "The controlled request returned HTTP 500 with the expected error marker.",
+        "collectedAt": "2026-01-01T00:00:00.200Z"
+      },
+      {
+        "id": "log-observation",
+        "kind": "log",
+        "origin": "execute_reproduction",
+        "locator": "controlled-target-log",
+        "content": "EXAMPLE_REQUEST_FAILED: nested profile was absent",
+        "collectedAt": "2026-01-01T00:00:00.200Z"
+      }
+    ],
+    "hypotheses": [
+      {
+        "id": "hyp-example",
+        "statement": "The handler assumes the nested profile exists.",
+        "faultCategory": "input-validation",
+        "suspectedSourceFile": "src/example.ts",
+        "suspectedSymbol": "handleExample",
+        "mechanism": "The handler dereferences a missing nested field before validating the request.",
+        "verificationPlan": "Send the reported body and compare the HTTP response and correlated log.",
+        "supportingEvidenceIds": ["report-observation", "source-observation"],
+        "contradictingEvidenceIds": [],
+        "confidence": 0.9,
+        "status": "proposed"
+      },
+      {
+        "id": "hyp-example",
+        "statement": "The handler assumes the nested profile exists.",
+        "faultCategory": "input-validation",
+        "suspectedSourceFile": "src/example.ts",
+        "suspectedSymbol": "handleExample",
+        "mechanism": "The handler dereferences a missing nested field before validating the request.",
+        "verificationPlan": "Send the reported body and compare the HTTP response and correlated log.",
+        "supportingEvidenceIds": ["report-observation", "source-observation", "http-observation", "log-observation"],
+        "contradictingEvidenceIds": [],
+        "confidence": 0.95,
+        "status": "tested"
+      },
+      {
+        "id": "hyp-example",
+        "statement": "The handler assumes the nested profile exists.",
+        "faultCategory": "input-validation",
+        "suspectedSourceFile": "src/example.ts",
+        "suspectedSymbol": "handleExample",
+        "mechanism": "The handler dereferences a missing nested field before validating the request.",
+        "verificationPlan": "Send the reported body and compare the HTTP response and correlated log.",
+        "supportingEvidenceIds": ["report-observation", "source-observation", "http-observation", "log-observation"],
+        "contradictingEvidenceIds": [],
+        "confidence": 0.95,
+        "status": "supported"
+      }
+    ],
+    "activeHypotheses": [
+      {
+        "id": "hyp-example",
+        "statement": "The handler assumes the nested profile exists.",
+        "faultCategory": "input-validation",
+        "suspectedSourceFile": "src/example.ts",
+        "suspectedSymbol": "handleExample",
+        "mechanism": "The handler dereferences a missing nested field before validating the request.",
+        "verificationPlan": "Send the reported body and compare the HTTP response and correlated log.",
+        "supportingEvidenceIds": ["report-observation", "source-observation", "http-observation", "log-observation"],
+        "contradictingEvidenceIds": [],
+        "confidence": 0.95,
+        "status": "supported"
+      }
+    ],
+    "experiments": [
+      {
+        "id": "experiment-1",
+        "hypothesisId": "hyp-example",
+        "request": {
+          "method": "POST",
+          "path": "/api/example",
+          "body": {
+            "email": "example@example.test"
+          }
+        },
+        "expectedObservation": "HTTP 500 with the reported error marker.",
+        "actualObservation": "HTTP 500 with the reported error marker and a matching controlled-target log.",
+        "evidenceIds": ["http-observation", "log-observation"],
+        "outcome": "reproduced"
+      }
+    ],
+    "diagnosis": {
+      "status": "verified",
+      "category": "input-validation",
+      "sourceFile": "src/example.ts",
+      "symbol": "handleExample",
+      "causalMechanism": "The handler dereferences a missing nested field before validating the request.",
+      "explanation": "Source evidence and the controlled reproduction establish the same failure path.",
+      "confidence": 0.95,
+      "evidenceIds": ["report-observation", "source-observation", "http-observation", "log-observation"],
+      "reproductionSummary": "The reported failure signature reproduced.",
+      "limitations": ["No remediation was applied or tested."]
+    },
+    "events": [
+      {
+        "sequence": 1,
+        "recordedAt": "2026-01-01T00:00:00.000Z",
+        "type": "investigation-started",
+        "investigationId": "fixture-investigation",
+        "caseId": "case-001",
+        "mode": "agentic",
+        "failureReport": {
+          "summary": "An example request returns HTTP 500 when a nested field is absent.",
+          "endpoint": "/api/example",
+          "method": "POST",
+          "observedStatus": 500,
+          "observedError": "example request failed",
+          "requestContext": {
+            "body": {
+              "email": "example@example.test"
+            }
+          }
+        }
+      },
+      {
+        "sequence": 2,
+        "recordedAt": "2026-01-01T00:00:00.100Z",
+        "type": "agent-step-recorded",
+        "role": "investigator",
+        "promptVersion": "investigator-v1",
+        "stepKind": "role-decision",
+        "structuredData": {
+          "action": "read_source",
+          "arguments": {
+            "path": "src/example.ts"
+          }
+        },
+        "evidenceIds": [],
+        "budgetState": {
+          "llmCalls": 1,
+          "totalToolCalls": 0
+        },
+        "humanCheckpoint": null
+      },
+      {
+        "sequence": 3,
+        "recordedAt": "2026-01-01T00:00:00.200Z",
+        "type": "agent-step-recorded",
+        "role": "orchestrator",
+        "promptVersion": null,
+        "stepKind": "tool-invocation",
+        "structuredData": {
+          "tool": "execute_reproduction",
+          "arguments": {
+            "method": "POST",
+            "path": "/api/example"
+          }
+        },
+        "evidenceIds": ["http-observation", "log-observation"],
+        "budgetState": {
+          "llmCalls": 2,
+          "totalToolCalls": 2,
+          "reproductionAttempts": 1
+        },
+        "humanCheckpoint": null
+      },
+      {
+        "sequence": 4,
+        "recordedAt": "2026-01-01T00:00:00.300Z",
+        "type": "agent-step-recorded",
+        "role": "verifier",
+        "promptVersion": "verifier-v2",
+        "stepKind": "verifier-feedback",
+        "structuredData": {
+          "hypothesisId": "hyp-example",
+          "outcome": "verified",
+          "evidenceIds": ["source-observation", "http-observation", "log-observation"],
+          "unsupportedClaims": [],
+          "limitations": ["No remediation was applied or tested."]
+        },
+        "evidenceIds": ["source-observation", "http-observation", "log-observation"],
+        "budgetState": {
+          "llmCalls": 3,
+          "totalToolCalls": 2,
+          "reproductionAttempts": 1
+        },
+        "humanCheckpoint": null
+      },
+      {
+        "sequence": 5,
+        "recordedAt": "2026-01-01T00:00:01.000Z",
+        "type": "agent-step-recorded",
+        "role": "orchestrator",
+        "promptVersion": null,
+        "stepKind": "termination",
+        "structuredData": {
+          "finalStatus": "verified",
+          "reason": "verified"
+        },
+        "evidenceIds": ["source-observation", "http-observation", "log-observation"],
+        "budgetState": {
+          "llmCalls": 3,
+          "totalToolCalls": 2,
+          "reproductionAttempts": 1
+        },
+        "humanCheckpoint": null
+      }
+    ]
+  }
+}

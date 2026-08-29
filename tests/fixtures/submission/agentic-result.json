@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "agentic-result-v1",
+  "runId": "fixture-run",
+  "caseId": "case-001",
+  "model": "fixture-model",
+  "temperature": null,
+  "promptVersions": {
+    "investigator": "investigator-v1",
+    "reproducer": "reproducer-v2",
+    "verifier": "verifier-v2"
+  },
+  "artifactHashes": {
+    "manifest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "sources": {
+      "src/example.ts": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "logs": {
+      "cases/public/case-001/app.log": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    "aggregate": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  },
+  "aggregateArtifactHash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "startedAt": "2026-01-01T00:00:00.000Z",
+  "completedAt": "2026-01-01T00:00:01.000Z",
+  "durationMs": 1000,
+  "diagnosis": {
+    "status": "verified",
+    "category": "input-validation",
+    "sourceFile": "src/example.ts",
+    "symbol": "handleExample",
+    "causalMechanism": "The handler dereferences a missing nested field before validating the request.",
+    "explanation": "Source evidence and the controlled reproduction establish the same failure path.",
+    "confidence": 0.95,
+    "evidenceIds": [
+      "report-observation",
+      "source-observation",
+      "http-observation",
+      "log-observation"
+    ],
+    "reproductionSummary": "The reported failure signature reproduced.",
+    "limitations": [
+      "No remediation was applied or tested."
+    ]
+  },
+  "terminationReason": "verified",
+  "unsupportedClaimCount": 0,
+  "unsupportedReferences": [],
+  "unsupportedClaims": [],
+  "tokenUsage": {
+    "inputTokens": 100,
+    "outputTokens": 20,
+    "totalTokens": 120
+  },
+  "llmCallCount": 3,
+  "toolCallCount": 2,
+  "toolCalls": {
+    "search_source": 0,
+    "read_source": 1,
+    "search_logs": 0,
+    "execute_reproduction": 1
+  },
+  "investigationRounds": 1,
+  "reproductionAttempts": 1,
+  "trajectoryFile": "fixture-run.trajectory.json"
+}
