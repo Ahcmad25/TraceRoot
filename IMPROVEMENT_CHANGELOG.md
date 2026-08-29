@@ -81,3 +81,19 @@ This log records evidence-driven changes made before the frozen comparison. It d
 - Change: Added separate execution scheduling, result-only evaluation, exact scoring, three-repetition aggregation, resumable attempts, fairness checks, and blinded review.
 - Evidence/test: Isolation, scoring, fresh-target, resume, aggregation, report, and redaction tests.
 - Impact: The project can measure either workflow honestly without loading answers during investigation or discarding completed paid runs.
+
+## Blinded-review leakage removed
+
+- Observed failure: Human-review evidence references used baseline-specific locators and agentic evidence UUIDs, allowing a reviewer familiar with TraceRoot to infer execution mode.
+- Root cause: Run-native evidence identifiers were copied into an otherwise blinded review item.
+- Change: Added `human-review-set-v2` with neutral evidence labels, normalized evidence packets, opaque review case IDs, and deterministic seed-based candidate ordering.
+- Evidence/test: Blinding tests reject mode labels, run/model metadata, tool origins, correlation IDs, UUID evidence IDs, and baseline/agentic locator conventions.
+- Impact: Mechanism reviewers can judge supporting content without knowing which system produced the candidate.
+
+## Evaluation ontology ambiguity documented
+
+- Observed failure: Exact scoring disagreed with technically overlapping diagnoses in case-005 and adjacent producer/consumer locations in case-002.
+- Root cause: The category ontology separates authentication from data-access, while the location ontology assigns a cross-file configuration mismatch to one owner.
+- Change: Preserved the frozen cases, ground truth, and scores; documented category overlap and root-cause ownership ambiguity in the public report.
+- Evidence/test: Per-repetition result/trajectory inspection confirmed the causal mechanisms and the exact fields responsible for scoring differences.
+- Impact: Submission claims distinguish runtime verification from strict static accuracy without tuning the benchmark after observing results.

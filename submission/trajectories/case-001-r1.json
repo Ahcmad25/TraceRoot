@@ -1,0 +1,553 @@
+{
+  "caseId": "case-001",
+  "evidence": [
+    {
+      "excerpt": "{\"summary\":\"User registration returns HTTP 500 for a request containing only an email address.\",\"endpoint\":\"/api/users/register\",\"method\":\"POST\",\"observedStatus\":500,\"observedError\":\"user registration failed\",\"requestContext\":{\"body\":{\"email\":\"ada@example.test\"}}}",
+      "kind": "report",
+      "label": "evidence-1"
+    },
+    {
+      "excerpt": "import type { Request, Response } from \"express\";\nimport type { TargetState } from \"../state.js\";\n\nexport function registerUser(request: Request, response: Response, state: TargetState): void {\n  const requestId = response.locals.requestId as string;\n\n  try {\n    const normalizedName = (request.body as { profile: { name: string } }).profile.name.trim();\n    response.status(201).json({ id: \"user-100\", name: normalizedName });\n  } catch (error: unknown) {\n    const message = error instanceof Error ? error.message : \"Unknown registration error\";\n    state.log(requestId, \"error\", \"USER_REGISTRATION_UNHANDLED\", { message });\n    response.status(500).json({ error: \"user registration failed\", requestId });\n  }\n}\n\nexport function assignProfileUpdateVersions(currentVersion: number, updateCount: number): number[] {\n  return Array.from({ length: updateCount }, () => currentVersion + 1);\n}\n\nexport function updateUserProfile(request: Request, response: Response, state: TargetState): void {\n  const requestId = response.locals.requestId as string;\n  const body = request.body as { displayName?: unknown; locale?: unknown };\n  const updateCount = [body.displayName, body.locale].filter((value) => value !== undefined).length;\n  const versions = assignProfileUpdateVersions(state.data().profileVersion, updateCount);\n\n  if (new Set(versions).size !== versions.length) {\n    state.log(requestId, \"error\", \"PROFILE_UPDATE_VERSION_COLLISION\", {\n      currentVersion: state.data().profileVersion,\n      attemptedVersions: versions,\n      updateCount,\n    });\n    response.status(409).json({ error: \"profil",
+      "kind": "source",
+      "label": "evidence-2"
+    },
+    {
+      "excerpt": "{\"status\":500,\"body\":{\"error\":\"user registration failed\",\"requestId\":\"[correlation-id]\"},\"assertions\":[{\"kind\":\"method\",\"requirement\":\"required\",\"expected\":\"POST\",\"actual\":\"POST\",\"passed\":true},{\"kind\":\"path\",\"requirement\":\"required\",\"expected\":\"/api/users/register\",\"actual\":\"/api/users/register\",\"passed\":true},{\"kind\":\"status\",\"requirement\":\"required\",\"expected\":500,\"actual\":500,\"passed\":true},{\"kind\":\"body\",\"requirement\":\"required\",\"expected\":\"user registration failed\",\"actual\":\"{\\\"error\\\":\\\"user registration failed\\\",\\\"requestId\\\":\\\"[correlation-id]\\\"}\",\"passed\":true},{\"kind\":\"log\",\"requirement\":\"supporting\",\"expected\":\"USER_REGISTRATION_UNHANDLED\",\"actual\":\"[{\\\"sequence\\\":1,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"info\\\",\\\"message\\\":\\\"REQUEST_RECEIVED\\\",\\\"details\\\":{\\\"method\\\":\\\"POST\\\",\\\"path\\\":\\\"/api/users/register\\\"}},{\\\"sequence\\\":2,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"error\\\",\\\"message\\\":\\\"USER_REGISTRATION_UNHANDLED\\\",\\\"details\\\":{\\\"message\\\":\\\"Cannot read properties of undefined (reading 'name')\\\"}}]\",\"passed\":true},{\"kind\":\"log\",\"requirement\":\"supporting\",\"expected\":\"Cannot read properties of undefined\",\"actual\":\"[{\\\"sequence\\\":1,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"info\\\",\\\"message\\\":\\\"REQUEST_RECEIVED\\\",\\\"details\\\":{\\\"method\\\":\\\"POST\\\",\\\"path\\\":\\\"/api/users/register\\\"}},{\\\"sequence\\\":2,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"error\\\",\\\"message\\\":\\\"USER_REGISTRATION_UNHANDLED\\\",\\\"details\\\":{\\\"message\\\":\\\"Cannot read properties of undefined (reading 'name')\\\"}}]\",\"passed\":true},{\"kind\":\"log\",\"requirement\":\"supporting\",\"expected\":\"p",
+      "kind": "http",
+      "label": "evidence-3"
+    },
+    {
+      "excerpt": "[{\"sequence\":1,\"requestId\":\"[correlation-id]\",\"level\":\"info\",\"message\":\"REQUEST_RECEIVED\",\"details\":{\"method\":\"POST\",\"path\":\"/api/users/register\"}},{\"sequence\":2,\"requestId\":\"[correlation-id]\",\"level\":\"error\",\"message\":\"USER_REGISTRATION_UNHANDLED\",\"details\":{\"message\":\"Cannot read properties of undefined (reading 'name')\"}}]",
+      "kind": "log",
+      "label": "evidence-4"
+    }
+  ],
+  "experiments": [
+    {
+      "actualObservation": "{\"status\":500,\"body\":{\"error\":\"user registration failed\",\"requestId\":\"[correlation-id]\"},\"bodyText\":\"{\\\"error\\\":\\\"user registration failed\\\",\\\"requestId\\\":\\\"[correlation-id]\\\"}\"}",
+      "evidenceIds": [
+        "evidence-3",
+        "evidence-4"
+      ],
+      "expectedObservation": "{\"required\":{\"method\":\"POST\",\"path\":\"/api/users/register\",\"status\":500,\"bodyContains\":\"user registration failed\"},\"supporting\":{\"logContains\":[\"USER_REGISTRATION_UNHANDLED\",\"Cannot read properties of undefined\",\"profile\"]}}",
+      "hypothesisId": "hypothesis-1",
+      "id": "experiment-1",
+      "outcome": "reproduced",
+      "request": {
+        "body": {
+          "email": "ada@example.test"
+        },
+        "method": "POST",
+        "path": "/api/users/register"
+      }
+    }
+  ],
+  "failureReport": {
+    "endpoint": "/api/users/register",
+    "method": "POST",
+    "observedError": "user registration failed",
+    "observedStatus": 500,
+    "requestContext": {
+      "body": {
+        "email": "ada@example.test"
+      }
+    },
+    "summary": "User registration returns HTTP 500 for a request containing only an email address."
+  },
+  "hypothesisRevisions": [
+    {
+      "confidence": 0.99,
+      "contradictingEvidenceIds": [],
+      "faultCategory": "input-validation",
+      "id": "hypothesis-1",
+      "mechanism": "The expression request.body.profile.name.trim() dereferences profile without checking that it exists. For the reported body containing only email, profile is absent, so the expression can throw and the catch block returns the observed HTTP 500 with \"user registration failed\".",
+      "statement": "The registration handler assumes every request contains profile.name and throws when processing the reported email-only body.",
+      "status": "proposed",
+      "supportingEvidenceIds": [
+        "evidence-1",
+        "evidence-2"
+      ],
+      "suspectedSourceFile": "src/target-api/scenarios/user-registration.ts",
+      "suspectedSymbol": "registerUser",
+      "verificationPlan": "Invoke POST /api/users/register with {\"email\":\"ada@example.test\"}; confirm the USER_REGISTRATION_UNHANDLED log records a missing-profile dereference message and that execution reaches the catch block. Then add explicit validation for profile/name (or align the handler with the intended email-only contract) and verify the same request no longer returns 500."
+    },
+    {
+      "confidence": 0.99,
+      "contradictingEvidenceIds": [],
+      "faultCategory": "input-validation",
+      "id": "hypothesis-1",
+      "mechanism": "The expression request.body.profile.name.trim() dereferences profile without checking that it exists. For the reported body containing only email, profile is absent, so the expression can throw and the catch block returns the observed HTTP 500 with \"user registration failed\".",
+      "statement": "The registration handler assumes every request contains profile.name and throws when processing the reported email-only body.",
+      "status": "tested",
+      "supportingEvidenceIds": [
+        "evidence-1",
+        "evidence-2"
+      ],
+      "suspectedSourceFile": "src/target-api/scenarios/user-registration.ts",
+      "suspectedSymbol": "registerUser",
+      "verificationPlan": "Invoke POST /api/users/register with {\"email\":\"ada@example.test\"}; confirm the USER_REGISTRATION_UNHANDLED log records a missing-profile dereference message and that execution reaches the catch block. Then add explicit validation for profile/name (or align the handler with the intended email-only contract) and verify the same request no longer returns 500."
+    },
+    {
+      "confidence": 0.99,
+      "contradictingEvidenceIds": [],
+      "faultCategory": "input-validation",
+      "id": "hypothesis-1",
+      "mechanism": "The expression request.body.profile.name.trim() dereferences profile without checking that it exists. For the reported body containing only email, profile is absent, so the expression can throw and the catch block returns the observed HTTP 500 with \"user registration failed\".",
+      "statement": "The registration handler assumes every request contains profile.name and throws when processing the reported email-only body.",
+      "status": "supported",
+      "supportingEvidenceIds": [
+        "evidence-1",
+        "evidence-2"
+      ],
+      "suspectedSourceFile": "src/target-api/scenarios/user-registration.ts",
+      "suspectedSymbol": "registerUser",
+      "verificationPlan": "Invoke POST /api/users/register with {\"email\":\"ada@example.test\"}; confirm the USER_REGISTRATION_UNHANDLED log records a missing-profile dereference message and that execution reaches the catch block. Then add explicit validation for profile/name (or align the handler with the intended email-only contract) and verify the same request no longer returns 500."
+    }
+  ],
+  "label": "clean verified investigation",
+  "metrics": {
+    "durationMs": 20716.639,
+    "investigationRounds": 1,
+    "llmCalls": 5,
+    "reproductionAttempts": 1,
+    "toolCalls": 2,
+    "totalTokens": 16689
+  },
+  "outcome": {
+    "diagnosis": {
+      "category": "input-validation",
+      "causalMechanism": "The expression request.body.profile.name.trim() dereferences profile without checking that it exists. For the reported body containing only email, profile is absent, so the expression can throw and the catch block returns the observed HTTP 500 with \"user registration failed\".",
+      "confidence": 0.99,
+      "evidenceIds": [
+        "evidence-1",
+        "evidence-2",
+        "evidence-3",
+        "evidence-4"
+      ],
+      "explanation": "The evidence establishes the proposed root cause, not merely correlation. The reported request contains only email, so `profile` is absent. The registration source unconditionally evaluates `request.body.profile.name.trim()` inside a try block and converts any resulting exception into the exact observed 500 response. A matching runtime reproduction against the same method and endpoint returned that response and emitted the correlated `USER_REGISTRATION_UNHANDLED` error with `Cannot read properties of undefined (reading 'name')`. Although the log does not literally name `profile`, the source identifies `profile` as the undefined receiver at the only shown `name` dereference in this handler. The failed optional log-text assertion therefore does not contradict the mechanism.",
+      "limitations": [
+        "The evidence does not establish whether email-only registration is the intended API contract or whether `profile.name` should instead be mandatory and rejected with a client error.",
+        "No remediation was applied and tested, so the evidence does not demonstrate that a particular fix eliminates the failure."
+      ],
+      "reproductionSummary": "Reproduced with [correlation-id]; observed failure signature matched.",
+      "sourceFile": "src/target-api/scenarios/user-registration.ts",
+      "status": "verified",
+      "symbol": "registerUser"
+    },
+    "terminationReason": "verified",
+    "unsupportedClaimCount": 0
+  },
+  "promptVersions": {
+    "investigator": "investigator-v1",
+    "reproducer": "reproducer-v2",
+    "verifier": "verifier-v2"
+  },
+  "repetition": 1,
+  "schemaVersion": "submission-trajectory-v1",
+  "sourceSchemaVersion": "agentic-trajectory-v3",
+  "steps": [
+    {
+      "action": "investigation_started",
+      "details": {
+        "failureReport": {
+          "endpoint": "/api/users/register",
+          "method": "POST",
+          "observedError": "user registration failed",
+          "observedStatus": 500,
+          "requestContext": {
+            "body": {
+              "email": "ada@example.test"
+            }
+          },
+          "summary": "User registration returns HTTP 500 for a request containing only an email address."
+        }
+      },
+      "role": "orchestrator",
+      "sequence": 1
+    },
+    {
+      "action": "read_source",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 1,
+        "reproductionAttempts": 0,
+        "totalTokens": 1483,
+        "totalToolCalls": 0
+      },
+      "details": {
+        "action": "read_source",
+        "arguments": {
+          "path": "src/target-api/scenarios/user-registration.ts"
+        },
+        "reason": "The failure is isolated to the user-registration endpoint, so inspect its implementation for handling of an email-only request before forming causal hypotheses."
+      },
+      "evidence": [],
+      "role": "investigator",
+      "sequence": 3
+    },
+    {
+      "action": "tool-invocation",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 1,
+        "reproductionAttempts": 0,
+        "totalTokens": 1483,
+        "totalToolCalls": 1
+      },
+      "details": {
+        "arguments": {
+          "path": "src/target-api/scenarios/user-registration.ts"
+        },
+        "tool": "read_source"
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 4,
+      "tool": "read_source"
+    },
+    {
+      "action": "tool-result",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 1,
+        "reproductionAttempts": 0,
+        "totalTokens": 1483,
+        "totalToolCalls": 1
+      },
+      "details": {
+        "durationMs": 8.01,
+        "ok": true,
+        "tool": "read_source",
+        "truncated": false
+      },
+      "evidence": [
+        "evidence-2"
+      ],
+      "role": "orchestrator",
+      "sequence": 6,
+      "tool": "read_source"
+    },
+    {
+      "action": "propose_hypotheses",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 2,
+        "reproductionAttempts": 0,
+        "totalTokens": 4010,
+        "totalToolCalls": 1
+      },
+      "details": {
+        "action": "propose_hypotheses",
+        "arguments": {
+          "hypotheses": [
+            {
+              "confidence": 0.99,
+              "contradictingEvidenceIds": [],
+              "faultCategory": "input-validation",
+              "id": "hypothesis-1",
+              "mechanism": "The expression request.body.profile.name.trim() dereferences profile without checking that it exists. For the reported body containing only email, profile is absent, so the expression can throw and the catch block returns the observed HTTP 500 with \"user registration failed\".",
+              "statement": "The registration handler assumes every request contains profile.name and throws when processing the reported email-only body.",
+              "supportingEvidenceIds": [
+                "evidence-1",
+                "evidence-2"
+              ],
+              "suspectedFile": "src/target-api/scenarios/user-registration.ts",
+              "suspectedSymbol": "registerUser",
+              "verificationPlan": "Invoke POST /api/users/register with {\"email\":\"ada@example.test\"}; confirm the USER_REGISTRATION_UNHANDLED log records a missing-profile dereference message and that execution reaches the catch block. Then add explicit validation for profile/name (or align the handler with the intended email-only contract) and verify the same request no longer returns 500."
+            }
+          ]
+        },
+        "reason": "The endpoint implementation directly explains both the request-specific trigger and the exact error response, so a single high-confidence causal hypothesis is warranted."
+      },
+      "evidence": [
+        "evidence-1",
+        "evidence-2"
+      ],
+      "role": "investigator",
+      "sequence": 7
+    },
+    {
+      "action": "hypothesis-change",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 2,
+        "reproductionAttempts": 0,
+        "totalTokens": 4010,
+        "totalToolCalls": 1
+      },
+      "details": {
+        "activeHypothesisIds": [
+          "hypothesis-1"
+        ]
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 9
+    },
+    {
+      "action": "request_reproduction",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 3,
+        "reproductionAttempts": 0,
+        "totalTokens": 7041,
+        "totalToolCalls": 1
+      },
+      "details": {
+        "action": "request_reproduction",
+        "arguments": {
+          "hypothesisId": "hypothesis-1"
+        },
+        "reason": "The active hypothesis directly accounts for the email-only trigger and observed 500 response. Reproduction should confirm that the missing profile dereference reaches the catch block and emits USER_REGISTRATION_UNHANDLED."
+      },
+      "evidence": [],
+      "role": "investigator",
+      "sequence": 10
+    },
+    {
+      "action": "role-decision",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 4,
+        "reproductionAttempts": 0,
+        "totalTokens": 10282,
+        "totalToolCalls": 1
+      },
+      "details": {
+        "expected": {
+          "supporting": {
+            "logContains": [
+              "USER_REGISTRATION_UNHANDLED",
+              "Cannot read properties of undefined",
+              "profile"
+            ]
+          }
+        },
+        "hypothesisId": "hypothesis-1",
+        "reason": "Send the exact reported email-only body. Because profile is absent, support for the proposed mechanism is an unhandled-registration log whose message identifies an undefined-value dereference involving profile.",
+        "request": {
+          "body": {
+            "email": "ada@example.test"
+          },
+          "method": "POST",
+          "path": "/api/users/register"
+        }
+      },
+      "evidence": [],
+      "role": "reproducer",
+      "sequence": 11
+    },
+    {
+      "action": "tool-invocation",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 4,
+        "reproductionAttempts": 1,
+        "totalTokens": 10282,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "arguments": {
+          "expectations": {
+            "required": {
+              "bodyContains": "user registration failed",
+              "method": "POST",
+              "path": "/api/users/register",
+              "status": 500
+            },
+            "supporting": {
+              "logContains": [
+                "USER_REGISTRATION_UNHANDLED",
+                "Cannot read properties of undefined",
+                "profile"
+              ]
+            }
+          },
+          "request": {
+            "body": {
+              "email": "ada@example.test"
+            },
+            "method": "POST",
+            "path": "/api/users/register"
+          }
+        },
+        "tool": "execute_reproduction"
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 12,
+      "tool": "execute_reproduction"
+    },
+    {
+      "action": "tool-result",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 4,
+        "reproductionAttempts": 1,
+        "totalTokens": 10282,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "durationMs": 60.028,
+        "ok": true,
+        "tool": "execute_reproduction",
+        "truncated": false
+      },
+      "evidence": [
+        "evidence-3",
+        "evidence-4"
+      ],
+      "role": "orchestrator",
+      "sequence": 15,
+      "tool": "execute_reproduction"
+    },
+    {
+      "action": "reproduction-result",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 4,
+        "reproductionAttempts": 1,
+        "totalTokens": 10282,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "hypothesisId": "hypothesis-1",
+        "outcome": "reproduced"
+      },
+      "evidence": [
+        "evidence-3",
+        "evidence-4"
+      ],
+      "role": "orchestrator",
+      "sequence": 18
+    },
+    {
+      "action": "role-decision",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 5,
+        "reproductionAttempts": 1,
+        "totalTokens": 16689,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "evidenceIds": [
+          "evidence-1",
+          "evidence-2",
+          "evidence-3",
+          "evidence-4"
+        ],
+        "explanation": "The evidence establishes the proposed root cause, not merely correlation. The reported request contains only email, so `profile` is absent. The registration source unconditionally evaluates `request.body.profile.name.trim()` inside a try block and converts any resulting exception into the exact observed 500 response. A matching runtime reproduction against the same method and endpoint returned that response and emitted the correlated `USER_REGISTRATION_UNHANDLED` error with `Cannot read properties of undefined (reading 'name')`. Although the log does not literally name `profile`, the source identifies `profile` as the undefined receiver at the only shown `name` dereference in this handler. The failed optional log-text assertion therefore does not contradict the mechanism.",
+        "hypothesisId": "hypothesis-1",
+        "limitations": [
+          "The evidence does not establish whether email-only registration is the intended API contract or whether `profile.name` should instead be mandatory and rejected with a client error.",
+          "No remediation was applied and tested, so the evidence does not demonstrate that a particular fix eliminates the failure."
+        ],
+        "missingEvidenceRequest": null,
+        "outcome": "verified",
+        "unsupportedClaims": []
+      },
+      "evidence": [
+        "evidence-1",
+        "evidence-2",
+        "evidence-3",
+        "evidence-4"
+      ],
+      "role": "verifier",
+      "sequence": 19
+    },
+    {
+      "action": "verifier-feedback",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 5,
+        "reproductionAttempts": 1,
+        "totalTokens": 16689,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "evidenceIds": [
+          "evidence-1",
+          "evidence-2",
+          "evidence-3",
+          "evidence-4"
+        ],
+        "explanation": "The evidence establishes the proposed root cause, not merely correlation. The reported request contains only email, so `profile` is absent. The registration source unconditionally evaluates `request.body.profile.name.trim()` inside a try block and converts any resulting exception into the exact observed 500 response. A matching runtime reproduction against the same method and endpoint returned that response and emitted the correlated `USER_REGISTRATION_UNHANDLED` error with `Cannot read properties of undefined (reading 'name')`. Although the log does not literally name `profile`, the source identifies `profile` as the undefined receiver at the only shown `name` dereference in this handler. The failed optional log-text assertion therefore does not contradict the mechanism.",
+        "hypothesisId": "hypothesis-1",
+        "limitations": [
+          "The evidence does not establish whether email-only registration is the intended API contract or whether `profile.name` should instead be mandatory and rejected with a client error.",
+          "No remediation was applied and tested, so the evidence does not demonstrate that a particular fix eliminates the failure."
+        ],
+        "missingEvidenceRequest": null,
+        "outcome": "verified",
+        "unsupportedClaims": []
+      },
+      "evidence": [
+        "evidence-1",
+        "evidence-2",
+        "evidence-3",
+        "evidence-4"
+      ],
+      "role": "verifier",
+      "sequence": 20
+    },
+    {
+      "action": "hypothesis-change",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 5,
+        "reproductionAttempts": 1,
+        "totalTokens": 16689,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "hypothesisId": "hypothesis-1",
+        "status": "supported"
+      },
+      "evidence": [
+        "evidence-1",
+        "evidence-2",
+        "evidence-3",
+        "evidence-4"
+      ],
+      "role": "orchestrator",
+      "sequence": 22
+    },
+    {
+      "action": "termination",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 5,
+        "reproductionAttempts": 1,
+        "totalTokens": 16689,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "finalStatus": "verified",
+        "reason": "verified"
+      },
+      "evidence": [
+        "evidence-1",
+        "evidence-2",
+        "evidence-3",
+        "evidence-4"
+      ],
+      "role": "orchestrator",
+      "sequence": 23
+    }
+  ]
+}

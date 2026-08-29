@@ -1,0 +1,831 @@
+{
+  "caseId": "case-002",
+  "evidence": [
+    {
+      "excerpt": "{\"summary\":\"The payment provider health route returns HTTP 503 in a seeded sandbox environment.\",\"endpoint\":\"/api/payments/provider\",\"method\":\"GET\",\"observedStatus\":503,\"observedError\":\"payment provider unavailable\",\"requestContext\":{}}",
+      "kind": "report",
+      "label": "evidence-1"
+    },
+    {
+      "excerpt": "import type { Request, Response } from \"express\";\nimport type { TargetState } from \"../state.js\";\n\nexport function createPaymentClient(\n  _request: Request,\n  response: Response,\n  state: TargetState,\n): void {\n  const requestId = response.locals.requestId as string;\n  const apiKey = state.data().configuration.PAYMENT_API_KEY;\n\n  if (apiKey === undefined) {\n    state.log(requestId, \"error\", \"PAYMENT_CLIENT_CONFIGURATION_MISSING\", {\n      key: \"PAYMENT_API_KEY\",\n    });\n    response.status(503).json({ error: \"payment provider unavailable\", requestId });\n    return;\n  }\n\n  response.status(200).json({ provider: \"sandbox\", configured: true });\n}\n\nexport function resolvePaymentRetryEndpoint(configuration: Readonly<Record<string, string>>): string | undefined {\n  return configuration.LEGACY_PAYMENT_RETRY_ENDPOINT ?? configuration.PAYMENT_RETRY_ENDPOINT;\n}\n\nexport function checkPaymentRetryService(\n  _request: Request,\n  response: Response,\n  state: TargetState,\n): void {\n  const requestId = response.locals.requestId as string;\n  const endpoint = resolvePaymentRetryEndpoint(state.data().configuration);\n\n  if (endpoint === undefined || endpoint.trim() === \"\") {\n    state.log(requestId, \"warn\", \"PAYMENT_RETRY_ENDPOINT_UNUSABLE\", {\n      selectedSource: \"legacy\",\n      selectedLength: endpoint?.length ?? null,\n    });\n    response.status(503).json({ error: \"payment retry service unavailable\", requestId });\n    return;\n  }\n\n  response.status(200).json({ available: true });\n}\n",
+      "kind": "source",
+      "label": "evidence-2"
+    },
+    {
+      "excerpt": "export interface ApplicationData {\n  configuration: Record<string, string>;\n  accounts: Array<{ id: string; externalId: string; displayName: string }>;\n  signingKeys: Array<{ id: string; material: string; active: boolean }>;\n  auditSinkAvailable: boolean;\n  profileVersion: number;\n}\n\nexport function selectSigningKey(_keyId: string, data: Readonly<ApplicationData>) {\n  return data.signingKeys[0];\n}\n\nexport function createApplicationData(): ApplicationData {\n  return {\n    configuration: {\n      PAYMENTS_API_KEY: \"sandbox-payment-key\",\n      PAYMENT_RETRY_ENDPOINT: \"https://sandbox.example.test/payment-retry\",\n      LEGACY_PAYMENT_RETRY_ENDPOINT: \"\",\n    },\n    accounts: [\n      { id: \"account-7\", externalId: \"ext-42\", displayName: \"Example Account\" },\n    ],\n    signingKeys: [\n      { id: \"key-retired\", material: \"retired-signing-material\", active: false },\n      { id: \"key-current\", material: \"current-signing-material\", active: true },\n    ],\n    auditSinkAvailable: false,\n    profileVersion: 7,\n  };\n}\n",
+      "kind": "source",
+      "label": "evidence-3"
+    },
+    {
+      "excerpt": "{\"status\":503,\"body\":{\"error\":\"payment provider unavailable\",\"requestId\":\"[correlation-id]\"},\"assertions\":[{\"kind\":\"method\",\"requirement\":\"required\",\"expected\":\"GET\",\"actual\":\"GET\",\"passed\":true},{\"kind\":\"path\",\"requirement\":\"required\",\"expected\":\"/api/payments/provider\",\"actual\":\"/api/payments/provider\",\"passed\":true},{\"kind\":\"status\",\"requirement\":\"required\",\"expected\":503,\"actual\":503,\"passed\":true},{\"kind\":\"body\",\"requirement\":\"required\",\"expected\":\"payment provider unavailable\",\"actual\":\"{\\\"error\\\":\\\"payment provider unavailable\\\",\\\"requestId\\\":\\\"[correlation-id]\\\"}\",\"passed\":true},{\"kind\":\"log\",\"requirement\":\"supporting\",\"expected\":\"PAYMENT_CLIENT_CONFIGURATION_MISSING\",\"actual\":\"[{\\\"sequence\\\":1,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"info\\\",\\\"message\\\":\\\"REQUEST_RECEIVED\\\",\\\"details\\\":{\\\"method\\\":\\\"GET\\\",\\\"path\\\":\\\"/api/payments/provider\\\"}},{\\\"sequence\\\":2,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"error\\\",\\\"message\\\":\\\"PAYMENT_CLIENT_CONFIGURATION_MISSING\\\",\\\"details\\\":{\\\"key\\\":\\\"PAYMENT_API_KEY\\\"}}]\",\"passed\":true},{\"kind\":\"log\",\"requirement\":\"supporting\",\"expected\":\"PAYMENT_API_KEY\",\"actual\":\"[{\\\"sequence\\\":1,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"info\\\",\\\"message\\\":\\\"REQUEST_RECEIVED\\\",\\\"details\\\":{\\\"method\\\":\\\"GET\\\",\\\"path\\\":\\\"/api/payments/provider\\\"}},{\\\"sequence\\\":2,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"error\\\",\\\"message\\\":\\\"PAYMENT_CLIENT_CONFIGURATION_MISSING\\\",\\\"details\\\":{\\\"key\\\":\\\"PAYMENT_API_KEY\\\"}}]\",\"passed\":true}],\"outcome\":\"reproduced\"}",
+      "kind": "http",
+      "label": "evidence-4"
+    },
+    {
+      "excerpt": "[{\"sequence\":1,\"requestId\":\"[correlation-id]\",\"level\":\"info\",\"message\":\"REQUEST_RECEIVED\",\"details\":{\"method\":\"GET\",\"path\":\"/api/payments/provider\"}},{\"sequence\":2,\"requestId\":\"[correlation-id]\",\"level\":\"error\",\"message\":\"PAYMENT_CLIENT_CONFIGURATION_MISSING\",\"details\":{\"key\":\"PAYMENT_API_KEY\"}}]",
+      "kind": "log",
+      "label": "evidence-5"
+    },
+    {
+      "excerpt": "{\"status\":503,\"body\":{\"error\":\"payment provider unavailable\",\"requestId\":\"[correlation-id]\"},\"assertions\":[{\"kind\":\"method\",\"requirement\":\"required\",\"expected\":\"GET\",\"actual\":\"GET\",\"passed\":true},{\"kind\":\"path\",\"requirement\":\"required\",\"expected\":\"/api/payments/provider\",\"actual\":\"/api/payments/provider\",\"passed\":true},{\"kind\":\"status\",\"requirement\":\"required\",\"expected\":503,\"actual\":503,\"passed\":true},{\"kind\":\"body\",\"requirement\":\"required\",\"expected\":\"payment provider unavailable\",\"actual\":\"{\\\"error\\\":\\\"payment provider unavailable\\\",\\\"requestId\\\":\\\"[correlation-id]\\\"}\",\"passed\":true},{\"kind\":\"log\",\"requirement\":\"supporting\",\"expected\":\"PAYMENT_CLIENT_CONFIGURATION_MISSING\",\"actual\":\"[{\\\"sequence\\\":1,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"info\\\",\\\"message\\\":\\\"REQUEST_RECEIVED\\\",\\\"details\\\":{\\\"method\\\":\\\"GET\\\",\\\"path\\\":\\\"/api/payments/provider\\\"}},{\\\"sequence\\\":2,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"error\\\",\\\"message\\\":\\\"PAYMENT_CLIENT_CONFIGURATION_MISSING\\\",\\\"details\\\":{\\\"key\\\":\\\"PAYMENT_API_KEY\\\"}}]\",\"passed\":true},{\"kind\":\"log\",\"requirement\":\"supporting\",\"expected\":\"PAYMENT_API_KEY\",\"actual\":\"[{\\\"sequence\\\":1,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"info\\\",\\\"message\\\":\\\"REQUEST_RECEIVED\\\",\\\"details\\\":{\\\"method\\\":\\\"GET\\\",\\\"path\\\":\\\"/api/payments/provider\\\"}},{\\\"sequence\\\":2,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"error\\\",\\\"message\\\":\\\"PAYMENT_CLIENT_CONFIGURATION_MISSING\\\",\\\"details\\\":{\\\"key\\\":\\\"PAYMENT_API_KEY\\\"}}]\",\"passed\":true}],\"outcome\":\"reproduced\"}",
+      "kind": "http",
+      "label": "evidence-6"
+    },
+    {
+      "excerpt": "[{\"sequence\":1,\"requestId\":\"[correlation-id]\",\"level\":\"info\",\"message\":\"REQUEST_RECEIVED\",\"details\":{\"method\":\"GET\",\"path\":\"/api/payments/provider\"}},{\"sequence\":2,\"requestId\":\"[correlation-id]\",\"level\":\"error\",\"message\":\"PAYMENT_CLIENT_CONFIGURATION_MISSING\",\"details\":{\"key\":\"PAYMENT_API_KEY\"}}]",
+      "kind": "log",
+      "label": "evidence-7"
+    }
+  ],
+  "experiments": [
+    {
+      "actualObservation": "{\"status\":503,\"body\":{\"error\":\"payment provider unavailable\",\"requestId\":\"[correlation-id]\"},\"bodyText\":\"{\\\"error\\\":\\\"payment provider unavailable\\\",\\\"requestId\\\":\\\"[correlation-id]\\\"}\"}",
+      "evidenceIds": [
+        "evidence-4",
+        "evidence-5"
+      ],
+      "expectedObservation": "{\"required\":{\"method\":\"GET\",\"path\":\"/api/payments/provider\",\"status\":503,\"bodyContains\":\"payment provider unavailable\"},\"supporting\":{\"logContains\":[\"PAYMENT_CLIENT_CONFIGURATION_MISSING\",\"PAYMENT_API_KEY\"]}}",
+      "hypothesisId": "hypothesis-1",
+      "id": "experiment-1",
+      "outcome": "reproduced",
+      "request": {
+        "method": "GET",
+        "path": "/api/payments/provider"
+      }
+    },
+    {
+      "actualObservation": "{\"status\":503,\"body\":{\"error\":\"payment provider unavailable\",\"requestId\":\"[correlation-id]\"},\"bodyText\":\"{\\\"error\\\":\\\"payment provider unavailable\\\",\\\"requestId\\\":\\\"[correlation-id]\\\"}\"}",
+      "evidenceIds": [
+        "evidence-6",
+        "evidence-7"
+      ],
+      "expectedObservation": "{\"required\":{\"method\":\"GET\",\"path\":\"/api/payments/provider\",\"status\":503,\"bodyContains\":\"payment provider unavailable\"},\"supporting\":{\"logContains\":[\"PAYMENT_CLIENT_CONFIGURATION_MISSING\",\"PAYMENT_API_KEY\"]}}",
+      "hypothesisId": "hypothesis-1",
+      "id": "experiment-2",
+      "outcome": "reproduced",
+      "request": {
+        "method": "GET",
+        "path": "/api/payments/provider"
+      }
+    }
+  ],
+  "failureReport": {
+    "endpoint": "/api/payments/provider",
+    "method": "GET",
+    "observedError": "payment provider unavailable",
+    "observedStatus": 503,
+    "requestContext": {},
+    "summary": "The payment provider health route returns HTTP 503 in a seeded sandbox environment."
+  },
+  "hypothesisRevisions": [
+    {
+      "confidence": 0.99,
+      "contradictingEvidenceIds": [],
+      "faultCategory": "configuration",
+      "id": "hypothesis-1",
+      "mechanism": "createApplicationData seeds `PAYMENTS_API_KEY`, while `createPaymentClient` reads `PAYMENT_API_KEY`. The expected property is therefore undefined, triggering the exact 503 response and error reported.",
+      "statement": "The seeded sandbox configuration uses a different payment API key name than the provider health handler expects, causing the handler to treat the provider as unconfigured and return HTTP 503.",
+      "status": "proposed",
+      "supportingEvidenceIds": [
+        "evidence-1",
+        "evidence-2",
+        "evidence-3"
+      ],
+      "suspectedSourceFile": "src/target-api/application-data.ts",
+      "suspectedSymbol": "createApplicationData",
+      "verificationPlan": "Rename the seeded configuration property from `PAYMENTS_API_KEY` to `PAYMENT_API_KEY`, then issue GET `/api/payments/provider`; confirm it returns HTTP 200 with `{ provider: \"sandbox\", configured: true }` and no `PAYMENT_CLIENT_CONFIGURATION_MISSING` log event."
+    },
+    {
+      "confidence": 0.99,
+      "contradictingEvidenceIds": [],
+      "faultCategory": "configuration",
+      "id": "hypothesis-1",
+      "mechanism": "createApplicationData seeds `PAYMENTS_API_KEY`, while `createPaymentClient` reads `PAYMENT_API_KEY`. The expected property is therefore undefined, triggering the exact 503 response and error reported.",
+      "statement": "The seeded sandbox configuration uses a different payment API key name than the provider health handler expects, causing the handler to treat the provider as unconfigured and return HTTP 503.",
+      "status": "tested",
+      "supportingEvidenceIds": [
+        "evidence-1",
+        "evidence-2",
+        "evidence-3"
+      ],
+      "suspectedSourceFile": "src/target-api/application-data.ts",
+      "suspectedSymbol": "createApplicationData",
+      "verificationPlan": "Rename the seeded configuration property from `PAYMENTS_API_KEY` to `PAYMENT_API_KEY`, then issue GET `/api/payments/provider`; confirm it returns HTTP 200 with `{ provider: \"sandbox\", configured: true }` and no `PAYMENT_CLIENT_CONFIGURATION_MISSING` log event."
+    },
+    {
+      "confidence": 0.99,
+      "contradictingEvidenceIds": [],
+      "faultCategory": "configuration",
+      "id": "hypothesis-1",
+      "mechanism": "createApplicationData seeds `PAYMENTS_API_KEY`, while `createPaymentClient` reads `PAYMENT_API_KEY`. The expected property is therefore undefined, triggering the exact 503 response and error reported.",
+      "statement": "The seeded sandbox configuration uses a different payment API key name than the provider health handler expects, causing the handler to treat the provider as unconfigured and return HTTP 503.",
+      "status": "tested",
+      "supportingEvidenceIds": [
+        "evidence-1",
+        "evidence-2",
+        "evidence-3"
+      ],
+      "suspectedSourceFile": "src/target-api/application-data.ts",
+      "suspectedSymbol": "createApplicationData",
+      "verificationPlan": "Rename the seeded configuration property from `PAYMENTS_API_KEY` to `PAYMENT_API_KEY`, then issue GET `/api/payments/provider`; confirm it returns HTTP 200 with `{ provider: \"sandbox\", configured: true }` and no `PAYMENT_CLIENT_CONFIGURATION_MISSING` log event."
+    }
+  ],
+  "label": "bounded evidence-insufficient abstention",
+  "metrics": {
+    "durationMs": 47175.126,
+    "investigationRounds": 2,
+    "llmCalls": 9,
+    "reproductionAttempts": 2,
+    "toolCalls": 4,
+    "totalTokens": 42725
+  },
+  "outcome": {
+    "diagnosis": {
+      "category": "configuration",
+      "causalMechanism": "createApplicationData seeds `PAYMENTS_API_KEY`, while `createPaymentClient` reads `PAYMENT_API_KEY`. The expected property is therefore undefined, triggering the exact 503 response and error reported.",
+      "confidence": 0.99,
+      "evidenceIds": [
+        "evidence-1",
+        "evidence-2",
+        "evidence-3"
+      ],
+      "explanation": "A causal hypothesis was formed but did not satisfy verification prerequisites.",
+      "limitations": [
+        "The existing reproduction exercises only the failing configuration and does not test the proposed fix.",
+        "The runtime evidence confirms that `PAYMENT_API_KEY` is absent at handler execution, but does not independently show that the seed-name mismatch is the sole reason for that runtime absence.",
+        "Neither reproduction applied the proposed configuration correction; both only reproduced the original 503.",
+        "The runtime evidence establishes that `PAYMENT_API_KEY` is absent at handler execution, but does not independently establish that the seed-name mismatch is the sole cause of that absence.",
+        "No successful HTTP 200 control response is included.",
+        "evidence_insufficient_after_max_rounds"
+      ],
+      "reproductionSummary": "Last outcome: reproduced.",
+      "sourceFile": "src/target-api/application-data.ts",
+      "status": "unverified",
+      "symbol": "createApplicationData"
+    },
+    "terminationReason": "evidence_insufficient_after_max_rounds",
+    "unsupportedClaimCount": 0
+  },
+  "promptVersions": {
+    "investigator": "investigator-v1",
+    "reproducer": "reproducer-v2",
+    "verifier": "verifier-v2"
+  },
+  "repetition": 2,
+  "schemaVersion": "submission-trajectory-v1",
+  "sourceSchemaVersion": "agentic-trajectory-v3",
+  "steps": [
+    {
+      "action": "investigation_started",
+      "details": {
+        "failureReport": {
+          "endpoint": "/api/payments/provider",
+          "method": "GET",
+          "observedError": "payment provider unavailable",
+          "observedStatus": 503,
+          "requestContext": {},
+          "summary": "The payment provider health route returns HTTP 503 in a seeded sandbox environment."
+        }
+      },
+      "role": "orchestrator",
+      "sequence": 1
+    },
+    {
+      "action": "read_source",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 1,
+        "reproductionAttempts": 0,
+        "totalTokens": 1464,
+        "totalToolCalls": 0
+      },
+      "details": {
+        "action": "read_source",
+        "arguments": {
+          "path": "src/target-api/scenarios/payment-provider.ts"
+        },
+        "reason": "The failure is isolated to the payment-provider health endpoint; inspect its route logic and configuration checks before forming a causal hypothesis."
+      },
+      "evidence": [],
+      "role": "investigator",
+      "sequence": 3
+    },
+    {
+      "action": "tool-invocation",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 1,
+        "reproductionAttempts": 0,
+        "totalTokens": 1464,
+        "totalToolCalls": 1
+      },
+      "details": {
+        "arguments": {
+          "path": "src/target-api/scenarios/payment-provider.ts"
+        },
+        "tool": "read_source"
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 4,
+      "tool": "read_source"
+    },
+    {
+      "action": "tool-result",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 1,
+        "reproductionAttempts": 0,
+        "totalTokens": 1464,
+        "totalToolCalls": 1
+      },
+      "details": {
+        "durationMs": 6.74,
+        "ok": true,
+        "tool": "read_source",
+        "truncated": false
+      },
+      "evidence": [
+        "evidence-2"
+      ],
+      "role": "orchestrator",
+      "sequence": 6,
+      "tool": "read_source"
+    },
+    {
+      "action": "read_source",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 2,
+        "reproductionAttempts": 0,
+        "totalTokens": 3677,
+        "totalToolCalls": 1
+      },
+      "details": {
+        "action": "read_source",
+        "arguments": {
+          "path": "src/target-api/application-data.ts"
+        },
+        "reason": "The handler returns this exact 503 only when PAYMENT_API_KEY is undefined; inspect the seeded sandbox configuration to determine whether the key is absent or misnamed before proposing a causal hypothesis."
+      },
+      "evidence": [],
+      "role": "investigator",
+      "sequence": 7
+    },
+    {
+      "action": "tool-invocation",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 2,
+        "reproductionAttempts": 0,
+        "totalTokens": 3677,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "arguments": {
+          "path": "src/target-api/application-data.ts"
+        },
+        "tool": "read_source"
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 8,
+      "tool": "read_source"
+    },
+    {
+      "action": "tool-result",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 2,
+        "reproductionAttempts": 0,
+        "totalTokens": 3677,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "durationMs": 6.867,
+        "ok": true,
+        "tool": "read_source",
+        "truncated": false
+      },
+      "evidence": [
+        "evidence-3"
+      ],
+      "role": "orchestrator",
+      "sequence": 10,
+      "tool": "read_source"
+    },
+    {
+      "action": "propose_hypotheses",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 3,
+        "reproductionAttempts": 0,
+        "totalTokens": 6765,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "action": "propose_hypotheses",
+        "arguments": {
+          "hypotheses": [
+            {
+              "confidence": 0.99,
+              "contradictingEvidenceIds": [],
+              "faultCategory": "configuration",
+              "id": "hypothesis-1",
+              "mechanism": "createApplicationData seeds `PAYMENTS_API_KEY`, while `createPaymentClient` reads `PAYMENT_API_KEY`. The expected property is therefore undefined, triggering the exact 503 response and error reported.",
+              "statement": "The seeded sandbox configuration uses a different payment API key name than the provider health handler expects, causing the handler to treat the provider as unconfigured and return HTTP 503.",
+              "supportingEvidenceIds": [
+                "evidence-1",
+                "evidence-2",
+                "evidence-3"
+              ],
+              "suspectedFile": "src/target-api/application-data.ts",
+              "suspectedSymbol": "createApplicationData",
+              "verificationPlan": "Rename the seeded configuration property from `PAYMENTS_API_KEY` to `PAYMENT_API_KEY`, then issue GET `/api/payments/provider`; confirm it returns HTTP 200 with `{ provider: \"sandbox\", configured: true }` and no `PAYMENT_CLIENT_CONFIGURATION_MISSING` log event."
+            }
+          ]
+        },
+        "reason": "The handler’s precise 503 branch and the seeded configuration show a direct singular/plural key mismatch that explains the reported response."
+      },
+      "evidence": [
+        "evidence-1",
+        "evidence-2",
+        "evidence-3"
+      ],
+      "role": "investigator",
+      "sequence": 11
+    },
+    {
+      "action": "hypothesis-change",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 3,
+        "reproductionAttempts": 0,
+        "totalTokens": 6765,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "activeHypothesisIds": [
+          "hypothesis-1"
+        ]
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 13
+    },
+    {
+      "action": "request_reproduction",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 4,
+        "reproductionAttempts": 0,
+        "totalTokens": 10432,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "action": "request_reproduction",
+        "arguments": {
+          "hypothesisId": "hypothesis-1"
+        },
+        "reason": "The active hypothesis directly explains the exact 503 branch: the seed defines `PAYMENTS_API_KEY` while the handler reads `PAYMENT_API_KEY`. Reproduction after correcting that key name can verify the causal link by checking for the expected HTTP 200 response and absence of the configuration-missing log event."
+      },
+      "evidence": [],
+      "role": "investigator",
+      "sequence": 14
+    },
+    {
+      "action": "role-decision",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 5,
+        "reproductionAttempts": 0,
+        "totalTokens": 14349,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "expected": {
+          "supporting": {
+            "logContains": [
+              "PAYMENT_CLIENT_CONFIGURATION_MISSING",
+              "PAYMENT_API_KEY"
+            ]
+          }
+        },
+        "hypothesisId": "hypothesis-1",
+        "reason": "A single request to the reported route exercises the precise missing-configuration branch. The diagnostic log markers support the proposed mechanism by showing that the handler considers the singular PAYMENT_API_KEY absent despite the sandbox seed containing the differently named PAYMENTS_API_KEY.",
+        "request": {
+          "body": null,
+          "method": "GET",
+          "path": "/api/payments/provider"
+        }
+      },
+      "evidence": [],
+      "role": "reproducer",
+      "sequence": 15
+    },
+    {
+      "action": "tool-invocation",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 5,
+        "reproductionAttempts": 1,
+        "totalTokens": 14349,
+        "totalToolCalls": 3
+      },
+      "details": {
+        "arguments": {
+          "expectations": {
+            "required": {
+              "bodyContains": "payment provider unavailable",
+              "method": "GET",
+              "path": "/api/payments/provider",
+              "status": 503
+            },
+            "supporting": {
+              "logContains": [
+                "PAYMENT_CLIENT_CONFIGURATION_MISSING",
+                "PAYMENT_API_KEY"
+              ]
+            }
+          },
+          "request": {
+            "method": "GET",
+            "path": "/api/payments/provider"
+          }
+        },
+        "tool": "execute_reproduction"
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 16,
+      "tool": "execute_reproduction"
+    },
+    {
+      "action": "tool-result",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 5,
+        "reproductionAttempts": 1,
+        "totalTokens": 14349,
+        "totalToolCalls": 3
+      },
+      "details": {
+        "durationMs": 31.575,
+        "ok": true,
+        "tool": "execute_reproduction",
+        "truncated": false
+      },
+      "evidence": [
+        "evidence-4",
+        "evidence-5"
+      ],
+      "role": "orchestrator",
+      "sequence": 19,
+      "tool": "execute_reproduction"
+    },
+    {
+      "action": "reproduction-result",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 5,
+        "reproductionAttempts": 1,
+        "totalTokens": 14349,
+        "totalToolCalls": 3
+      },
+      "details": {
+        "hypothesisId": "hypothesis-1",
+        "outcome": "reproduced"
+      },
+      "evidence": [
+        "evidence-4",
+        "evidence-5"
+      ],
+      "role": "orchestrator",
+      "sequence": 22
+    },
+    {
+      "action": "role-decision",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 6,
+        "reproductionAttempts": 1,
+        "totalTokens": 21081,
+        "totalToolCalls": 3
+      },
+      "details": {
+        "evidenceIds": [
+          "evidence-1",
+          "evidence-2",
+          "evidence-3",
+          "evidence-4",
+          "evidence-5"
+        ],
+        "explanation": "The evidence strongly supports the mechanism: the seed defines `PAYMENTS_API_KEY`, the handler reads `PAYMENT_API_KEY`, and the matching runtime request enters the missing-key branch and returns the reported 503. However, the reproduction only re-observed the failure; it did not perform the proposed corrective intervention. Therefore it does not conclusively establish that correcting this name mismatch restores the endpoint rather than merely identifying the immediate failure condition.",
+        "hypothesisId": "hypothesis-1",
+        "limitations": [
+          "The existing reproduction exercises only the failing configuration and does not test the proposed fix.",
+          "The runtime evidence confirms that `PAYMENT_API_KEY` is absent at handler execution, but does not independently show that the seed-name mismatch is the sole reason for that runtime absence."
+        ],
+        "missingEvidenceRequest": "In the same reset seeded sandbox runtime, rename `PAYMENTS_API_KEY` to `PAYMENT_API_KEY` (or otherwise inject the singular key while holding other state constant), then repeat GET `/api/payments/provider` and show HTTP 200 with `{ \"provider\": \"sandbox\", \"configured\": true }` and no `PAYMENT_CLIENT_CONFIGURATION_MISSING` event. Ideally also remove the singular key again and demonstrate the 503 returns.",
+        "outcome": "insufficient_evidence",
+        "unsupportedClaims": []
+      },
+      "evidence": [
+        "evidence-1",
+        "evidence-2",
+        "evidence-3",
+        "evidence-4",
+        "evidence-5"
+      ],
+      "role": "verifier",
+      "sequence": 23
+    },
+    {
+      "action": "verifier-feedback",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 6,
+        "reproductionAttempts": 1,
+        "totalTokens": 21081,
+        "totalToolCalls": 3
+      },
+      "details": {
+        "evidenceIds": [
+          "evidence-1",
+          "evidence-2",
+          "evidence-3",
+          "evidence-4",
+          "evidence-5"
+        ],
+        "explanation": "The evidence strongly supports the mechanism: the seed defines `PAYMENTS_API_KEY`, the handler reads `PAYMENT_API_KEY`, and the matching runtime request enters the missing-key branch and returns the reported 503. However, the reproduction only re-observed the failure; it did not perform the proposed corrective intervention. Therefore it does not conclusively establish that correcting this name mismatch restores the endpoint rather than merely identifying the immediate failure condition.",
+        "hypothesisId": "hypothesis-1",
+        "limitations": [
+          "The existing reproduction exercises only the failing configuration and does not test the proposed fix.",
+          "The runtime evidence confirms that `PAYMENT_API_KEY` is absent at handler execution, but does not independently show that the seed-name mismatch is the sole reason for that runtime absence."
+        ],
+        "missingEvidenceRequest": "In the same reset seeded sandbox runtime, rename `PAYMENTS_API_KEY` to `PAYMENT_API_KEY` (or otherwise inject the singular key while holding other state constant), then repeat GET `/api/payments/provider` and show HTTP 200 with `{ \"provider\": \"sandbox\", \"configured\": true }` and no `PAYMENT_CLIENT_CONFIGURATION_MISSING` event. Ideally also remove the singular key again and demonstrate the 503 returns.",
+        "outcome": "insufficient_evidence",
+        "unsupportedClaims": []
+      },
+      "evidence": [
+        "evidence-1",
+        "evidence-2",
+        "evidence-3",
+        "evidence-4",
+        "evidence-5"
+      ],
+      "role": "verifier",
+      "sequence": 24
+    },
+    {
+      "action": "request_reproduction",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 2,
+        "llmCalls": 7,
+        "reproductionAttempts": 1,
+        "totalTokens": 27435,
+        "totalToolCalls": 3
+      },
+      "details": {
+        "action": "request_reproduction",
+        "arguments": {
+          "hypothesisId": "hypothesis-1"
+        },
+        "reason": "The active hypothesis remains strongly supported but requires the verifier’s corrective intervention test: in the same seeded sandbox, replace or override `PAYMENTS_API_KEY` with `PAYMENT_API_KEY`, then repeat GET `/api/payments/provider` and confirm HTTP 200 with `{ \"provider\": \"sandbox\", \"configured\": true }` and no `PAYMENT_CLIENT_CONFIGURATION_MISSING` log. Holding all other state constant will test whether the key-name mismatch is causal rather than merely correlated with the failure."
+      },
+      "evidence": [],
+      "role": "investigator",
+      "sequence": 25
+    },
+    {
+      "action": "role-decision",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 2,
+        "llmCalls": 8,
+        "reproductionAttempts": 1,
+        "totalTokens": 33959,
+        "totalToolCalls": 3
+      },
+      "details": {
+        "expected": {
+          "supporting": {
+            "logContains": [
+              "PAYMENT_CLIENT_CONFIGURATION_MISSING",
+              "PAYMENT_API_KEY"
+            ]
+          }
+        },
+        "hypothesisId": "hypothesis-1",
+        "reason": "The smallest permitted HTTP experiment is a single request to the reported provider route. The configuration-missing event and singular key marker show that the handler enters the branch caused by the absent PAYMENT_API_KEY. The requested corrective intervention cannot be represented by a normal request without modifying source/state or using a control endpoint.",
+        "request": {
+          "body": null,
+          "method": "GET",
+          "path": "/api/payments/provider"
+        }
+      },
+      "evidence": [],
+      "role": "reproducer",
+      "sequence": 26
+    },
+    {
+      "action": "tool-invocation",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 2,
+        "llmCalls": 8,
+        "reproductionAttempts": 2,
+        "totalTokens": 33959,
+        "totalToolCalls": 4
+      },
+      "details": {
+        "arguments": {
+          "expectations": {
+            "required": {
+              "bodyContains": "payment provider unavailable",
+              "method": "GET",
+              "path": "/api/payments/provider",
+              "status": 503
+            },
+            "supporting": {
+              "logContains": [
+                "PAYMENT_CLIENT_CONFIGURATION_MISSING",
+                "PAYMENT_API_KEY"
+              ]
+            }
+          },
+          "request": {
+            "method": "GET",
+            "path": "/api/payments/provider"
+          }
+        },
+        "tool": "execute_reproduction"
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 27,
+      "tool": "execute_reproduction"
+    },
+    {
+      "action": "tool-result",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 2,
+        "llmCalls": 8,
+        "reproductionAttempts": 2,
+        "totalTokens": 33959,
+        "totalToolCalls": 4
+      },
+      "details": {
+        "durationMs": 19.186,
+        "ok": true,
+        "tool": "execute_reproduction",
+        "truncated": false
+      },
+      "evidence": [
+        "evidence-6",
+        "evidence-7"
+      ],
+      "role": "orchestrator",
+      "sequence": 30,
+      "tool": "execute_reproduction"
+    },
+    {
+      "action": "reproduction-result",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 2,
+        "llmCalls": 8,
+        "reproductionAttempts": 2,
+        "totalTokens": 33959,
+        "totalToolCalls": 4
+      },
+      "details": {
+        "hypothesisId": "hypothesis-1",
+        "outcome": "reproduced"
+      },
+      "evidence": [
+        "evidence-6",
+        "evidence-7"
+      ],
+      "role": "orchestrator",
+      "sequence": 33
+    },
+    {
+      "action": "role-decision",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 2,
+        "llmCalls": 9,
+        "reproductionAttempts": 2,
+        "totalTokens": 42725,
+        "totalToolCalls": 4
+      },
+      "details": {
+        "evidenceIds": [
+          "evidence-1",
+          "evidence-2",
+          "evidence-3",
+          "evidence-6",
+          "evidence-7"
+        ],
+        "explanation": "The source and matching runtime evidence strongly establish the immediate failure path: the sandbox seed contains `PAYMENTS_API_KEY`, the handler reads `PAYMENT_API_KEY`, and requests produce the corresponding missing-key log and 503 response. However, both reproductions only repeat the failing condition. The requested controlled intervention was not performed, so the evidence does not yet demonstrate that changing only the key name restores the endpoint and rules out another cause of the runtime absence.",
+        "hypothesisId": "hypothesis-1",
+        "limitations": [
+          "Neither reproduction applied the proposed configuration correction; both only reproduced the original 503.",
+          "The runtime evidence establishes that `PAYMENT_API_KEY` is absent at handler execution, but does not independently establish that the seed-name mismatch is the sole cause of that absence.",
+          "No successful HTTP 200 control response is included."
+        ],
+        "missingEvidenceRequest": "In a reset seeded sandbox, change only `PAYMENTS_API_KEY` to `PAYMENT_API_KEY` or inject the singular key while holding all other state constant. Then issue GET `/api/payments/provider` and provide evidence of HTTP 200 with `{ \"provider\": \"sandbox\", \"configured\": true }` and no `PAYMENT_CLIENT_CONFIGURATION_MISSING` event. A remove-and-retest control showing the 503 returns would further establish causality.",
+        "outcome": "insufficient_evidence",
+        "unsupportedClaims": []
+      },
+      "evidence": [
+        "evidence-1",
+        "evidence-2",
+        "evidence-3",
+        "evidence-6",
+        "evidence-7"
+      ],
+      "role": "verifier",
+      "sequence": 34
+    },
+    {
+      "action": "verifier-feedback",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 2,
+        "llmCalls": 9,
+        "reproductionAttempts": 2,
+        "totalTokens": 42725,
+        "totalToolCalls": 4
+      },
+      "details": {
+        "evidenceIds": [
+          "evidence-1",
+          "evidence-2",
+          "evidence-3",
+          "evidence-6",
+          "evidence-7"
+        ],
+        "explanation": "The source and matching runtime evidence strongly establish the immediate failure path: the sandbox seed contains `PAYMENTS_API_KEY`, the handler reads `PAYMENT_API_KEY`, and requests produce the corresponding missing-key log and 503 response. However, both reproductions only repeat the failing condition. The requested controlled intervention was not performed, so the evidence does not yet demonstrate that changing only the key name restores the endpoint and rules out another cause of the runtime absence.",
+        "hypothesisId": "hypothesis-1",
+        "limitations": [
+          "Neither reproduction applied the proposed configuration correction; both only reproduced the original 503.",
+          "The runtime evidence establishes that `PAYMENT_API_KEY` is absent at handler execution, but does not independently establish that the seed-name mismatch is the sole cause of that absence.",
+          "No successful HTTP 200 control response is included."
+        ],
+        "missingEvidenceRequest": "In a reset seeded sandbox, change only `PAYMENTS_API_KEY` to `PAYMENT_API_KEY` or inject the singular key while holding all other state constant. Then issue GET `/api/payments/provider` and provide evidence of HTTP 200 with `{ \"provider\": \"sandbox\", \"configured\": true }` and no `PAYMENT_CLIENT_CONFIGURATION_MISSING` event. A remove-and-retest control showing the 503 returns would further establish causality.",
+        "outcome": "insufficient_evidence",
+        "unsupportedClaims": []
+      },
+      "evidence": [
+        "evidence-1",
+        "evidence-2",
+        "evidence-3",
+        "evidence-6",
+        "evidence-7"
+      ],
+      "role": "verifier",
+      "sequence": 35
+    },
+    {
+      "action": "termination",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 2,
+        "llmCalls": 9,
+        "reproductionAttempts": 2,
+        "totalTokens": 42725,
+        "totalToolCalls": 4
+      },
+      "details": {
+        "finalStatus": "unverified",
+        "reason": "evidence_insufficient_after_max_rounds"
+      },
+      "evidence": [
+        "evidence-1",
+        "evidence-2",
+        "evidence-3"
+      ],
+      "role": "orchestrator",
+      "sequence": 36
+    }
+  ]
+}

@@ -1,0 +1,381 @@
+{
+  "aggregates": {
+    "agentic": {
+      "categoryAccuracy": 0.916667,
+      "inconclusiveRate": 0,
+      "meanDurationMs": 30625.292417,
+      "meanInvestigationRounds": 1.041667,
+      "meanLlmCalls": 6.166667,
+      "meanReproductionAttempts": 1.041667,
+      "meanToolCalls": 3.083333,
+      "meanTotalTokens": 22524.541667,
+      "rootCauseFieldsAccuracy": 0.833333,
+      "sourceFileAccuracy": 0.916667,
+      "symbolAccuracy": 0.916667,
+      "totalRuns": 24,
+      "unsupportedClaimRate": 0,
+      "verifiedDiagnosisRate": 0.958333
+    },
+    "baseline": {
+      "categoryAccuracy": 0.875,
+      "inconclusiveRate": 0,
+      "meanDurationMs": 4919.525875,
+      "meanInvestigationRounds": 0,
+      "meanLlmCalls": 1,
+      "meanReproductionAttempts": 0,
+      "meanToolCalls": 0,
+      "meanTotalTokens": 4105.5,
+      "rootCauseFieldsAccuracy": 0.875,
+      "sourceFileAccuracy": 1,
+      "symbolAccuracy": 1,
+      "totalRuns": 24,
+      "unsupportedClaimRate": 0,
+      "verifiedDiagnosisRate": 0
+    }
+  },
+  "benchmark": {
+    "cases": 8,
+    "effectiveTemperature": null,
+    "frozenVersions": {
+      "agenticResult": "agentic-result-v1",
+      "agenticTrajectory": "agentic-trajectory-v3",
+      "baselinePrompt": "baseline-v2",
+      "humanReviewSet": "human-review-set-v2",
+      "investigatorPrompt": "investigator-v1",
+      "reproducerPrompt": "reproducer-v2",
+      "toolContract": "1.1.0",
+      "verifierPrompt": "verifier-v2"
+    },
+    "model": "gpt-5.6-sol",
+    "modes": [
+      "baseline",
+      "agentic"
+    ],
+    "repetitions": 3,
+    "scoredRuns": 48
+  },
+  "differences": {
+    "categoryAccuracy": 0.041667,
+    "inconclusiveRate": 0,
+    "meanDurationMs": 25705.766542,
+    "meanInvestigationRounds": 1.041667,
+    "meanLlmCalls": 5.166667,
+    "meanReproductionAttempts": 1.041667,
+    "meanToolCalls": 3.083333,
+    "meanTotalTokens": 18419.041667,
+    "rootCauseFieldsAccuracy": -0.041667,
+    "sourceFileAccuracy": -0.083333,
+    "symbolAccuracy": -0.083333,
+    "unsupportedClaimRate": 0,
+    "verifiedDiagnosisRate": 0.958333
+  },
+  "fairness": {
+    "failedAttempts": 0,
+    "issues": []
+  },
+  "interpretation": {
+    "staticAccuracy": "The evaluation does not establish a consistent agentic advantage in strict static root-cause localization.",
+    "unsupportedClaims": "No scored run contained an unsupported positive factual claim.",
+    "verifiedEvidence": "Agentic runs produced 23/24 evidence-verified diagnoses; baseline verification is not applicable because it has no runtime capability by design."
+  },
+  "perCase": [
+    {
+      "caseId": "case-001",
+      "modes": {
+        "agentic": {
+          "allRootCauseFieldsCorrect": 3,
+          "categoryCorrect": 3,
+          "evidenceVerified": 3,
+          "meanDurationMs": 21191.313333,
+          "meanLlmCalls": 5,
+          "meanTokens": 16683.666667,
+          "meanToolCalls": 2,
+          "runs": 3,
+          "sourceFileCorrect": 3,
+          "symbolCorrect": 3,
+          "terminationReasons": {
+            "verified": 3
+          },
+          "unsupportedClaims": 0
+        },
+        "baseline": {
+          "allRootCauseFieldsCorrect": 3,
+          "categoryCorrect": 3,
+          "evidenceVerified": null,
+          "meanDurationMs": 5829.482,
+          "meanLlmCalls": 1,
+          "meanTokens": 4048,
+          "meanToolCalls": 0,
+          "runs": 3,
+          "sourceFileCorrect": 3,
+          "symbolCorrect": 3,
+          "terminationReasons": {
+            "baseline_completed": 3
+          },
+          "unsupportedClaims": 0
+        }
+      }
+    },
+    {
+      "caseId": "case-002",
+      "modes": {
+        "agentic": {
+          "allRootCauseFieldsCorrect": 1,
+          "categoryCorrect": 3,
+          "evidenceVerified": 2,
+          "meanDurationMs": 35316.733667,
+          "meanLlmCalls": 7,
+          "meanTokens": 28300.666667,
+          "meanToolCalls": 3.333333,
+          "runs": 3,
+          "sourceFileCorrect": 1,
+          "symbolCorrect": 1,
+          "terminationReasons": {
+            "evidence_insufficient_after_max_rounds": 1,
+            "verified": 2
+          },
+          "unsupportedClaims": 0
+        },
+        "baseline": {
+          "allRootCauseFieldsCorrect": 3,
+          "categoryCorrect": 3,
+          "evidenceVerified": null,
+          "meanDurationMs": 3957.495333,
+          "meanLlmCalls": 1,
+          "meanTokens": 4011.333333,
+          "meanToolCalls": 0,
+          "runs": 3,
+          "sourceFileCorrect": 3,
+          "symbolCorrect": 3,
+          "terminationReasons": {
+            "baseline_completed": 3
+          },
+          "unsupportedClaims": 0
+        }
+      }
+    },
+    {
+      "caseId": "case-003",
+      "modes": {
+        "agentic": {
+          "allRootCauseFieldsCorrect": 3,
+          "categoryCorrect": 3,
+          "evidenceVerified": 3,
+          "meanDurationMs": 24322.137667,
+          "meanLlmCalls": 5,
+          "meanTokens": 18404,
+          "meanToolCalls": 2,
+          "runs": 3,
+          "sourceFileCorrect": 3,
+          "symbolCorrect": 3,
+          "terminationReasons": {
+            "verified": 3
+          },
+          "unsupportedClaims": 0
+        },
+        "baseline": {
+          "allRootCauseFieldsCorrect": 3,
+          "categoryCorrect": 3,
+          "evidenceVerified": null,
+          "meanDurationMs": 6205.973333,
+          "meanLlmCalls": 1,
+          "meanTokens": 4214.333333,
+          "meanToolCalls": 0,
+          "runs": 3,
+          "sourceFileCorrect": 3,
+          "symbolCorrect": 3,
+          "terminationReasons": {
+            "baseline_completed": 3
+          },
+          "unsupportedClaims": 0
+        }
+      }
+    },
+    {
+      "caseId": "case-004",
+      "modes": {
+        "agentic": {
+          "allRootCauseFieldsCorrect": 3,
+          "categoryCorrect": 3,
+          "evidenceVerified": 3,
+          "meanDurationMs": 27572.862667,
+          "meanLlmCalls": 6,
+          "meanTokens": 22700,
+          "meanToolCalls": 3,
+          "runs": 3,
+          "sourceFileCorrect": 3,
+          "symbolCorrect": 3,
+          "terminationReasons": {
+            "verified": 3
+          },
+          "unsupportedClaims": 0
+        },
+        "baseline": {
+          "allRootCauseFieldsCorrect": 3,
+          "categoryCorrect": 3,
+          "evidenceVerified": null,
+          "meanDurationMs": 5515.037667,
+          "meanLlmCalls": 1,
+          "meanTokens": 4175,
+          "meanToolCalls": 0,
+          "runs": 3,
+          "sourceFileCorrect": 3,
+          "symbolCorrect": 3,
+          "terminationReasons": {
+            "baseline_completed": 3
+          },
+          "unsupportedClaims": 0
+        }
+      }
+    },
+    {
+      "caseId": "case-005",
+      "modes": {
+        "agentic": {
+          "allRootCauseFieldsCorrect": 1,
+          "categoryCorrect": 1,
+          "evidenceVerified": 3,
+          "meanDurationMs": 62512.042333,
+          "meanLlmCalls": 8.333333,
+          "meanTokens": 28344.333333,
+          "meanToolCalls": 5.333333,
+          "runs": 3,
+          "sourceFileCorrect": 3,
+          "symbolCorrect": 3,
+          "terminationReasons": {
+            "verified": 3
+          },
+          "unsupportedClaims": 0
+        },
+        "baseline": {
+          "allRootCauseFieldsCorrect": 0,
+          "categoryCorrect": 0,
+          "evidenceVerified": null,
+          "meanDurationMs": 4093.766667,
+          "meanLlmCalls": 1,
+          "meanTokens": 4090,
+          "meanToolCalls": 0,
+          "runs": 3,
+          "sourceFileCorrect": 3,
+          "symbolCorrect": 3,
+          "terminationReasons": {
+            "baseline_completed": 3
+          },
+          "unsupportedClaims": 0
+        }
+      }
+    },
+    {
+      "caseId": "case-006",
+      "modes": {
+        "agentic": {
+          "allRootCauseFieldsCorrect": 3,
+          "categoryCorrect": 3,
+          "evidenceVerified": 3,
+          "meanDurationMs": 27019.76,
+          "meanLlmCalls": 6,
+          "meanTokens": 21882.333333,
+          "meanToolCalls": 3,
+          "runs": 3,
+          "sourceFileCorrect": 3,
+          "symbolCorrect": 3,
+          "terminationReasons": {
+            "verified": 3
+          },
+          "unsupportedClaims": 0
+        },
+        "baseline": {
+          "allRootCauseFieldsCorrect": 3,
+          "categoryCorrect": 3,
+          "evidenceVerified": null,
+          "meanDurationMs": 4853.229333,
+          "meanLlmCalls": 1,
+          "meanTokens": 4075,
+          "meanToolCalls": 0,
+          "runs": 3,
+          "sourceFileCorrect": 3,
+          "symbolCorrect": 3,
+          "terminationReasons": {
+            "baseline_completed": 3
+          },
+          "unsupportedClaims": 0
+        }
+      }
+    },
+    {
+      "caseId": "case-007",
+      "modes": {
+        "agentic": {
+          "allRootCauseFieldsCorrect": 3,
+          "categoryCorrect": 3,
+          "evidenceVerified": 3,
+          "meanDurationMs": 22079.594667,
+          "meanLlmCalls": 5,
+          "meanTokens": 19143.333333,
+          "meanToolCalls": 2,
+          "runs": 3,
+          "sourceFileCorrect": 3,
+          "symbolCorrect": 3,
+          "terminationReasons": {
+            "verified": 3
+          },
+          "unsupportedClaims": 0
+        },
+        "baseline": {
+          "allRootCauseFieldsCorrect": 3,
+          "categoryCorrect": 3,
+          "evidenceVerified": null,
+          "meanDurationMs": 4233.894333,
+          "meanLlmCalls": 1,
+          "meanTokens": 4112,
+          "meanToolCalls": 0,
+          "runs": 3,
+          "sourceFileCorrect": 3,
+          "symbolCorrect": 3,
+          "terminationReasons": {
+            "baseline_completed": 3
+          },
+          "unsupportedClaims": 0
+        }
+      }
+    },
+    {
+      "caseId": "case-008",
+      "modes": {
+        "agentic": {
+          "allRootCauseFieldsCorrect": 3,
+          "categoryCorrect": 3,
+          "evidenceVerified": 3,
+          "meanDurationMs": 24987.895,
+          "meanLlmCalls": 7,
+          "meanTokens": 24738,
+          "meanToolCalls": 4,
+          "runs": 3,
+          "sourceFileCorrect": 3,
+          "symbolCorrect": 3,
+          "terminationReasons": {
+            "verified": 3
+          },
+          "unsupportedClaims": 0
+        },
+        "baseline": {
+          "allRootCauseFieldsCorrect": 3,
+          "categoryCorrect": 3,
+          "evidenceVerified": null,
+          "meanDurationMs": 4667.328333,
+          "meanLlmCalls": 1,
+          "meanTokens": 4118.333333,
+          "meanToolCalls": 0,
+          "runs": 3,
+          "sourceFileCorrect": 3,
+          "symbolCorrect": 3,
+          "terminationReasons": {
+            "baseline_completed": 3
+          },
+          "unsupportedClaims": 0
+        }
+      }
+    }
+  ],
+  "schemaVersion": "submission-evaluation-summary-v1"
+}

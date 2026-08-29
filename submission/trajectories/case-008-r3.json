@@ -1,0 +1,855 @@
+{
+  "caseId": "case-008",
+  "evidence": [
+    {
+      "excerpt": "{\"summary\":\"A request containing two valid profile field updates returns a version conflict.\",\"endpoint\":\"/api/users/profile\",\"method\":\"POST\",\"observedStatus\":409,\"observedError\":\"profile update conflict\",\"requestContext\":{\"body\":{\"displayName\":\"Ada Lovelace\",\"locale\":\"en-PH\"}}}",
+      "kind": "report",
+      "label": "evidence-1"
+    },
+    {
+      "excerpt": "{\"query\":\"\\\"profile update conflict\\\" OR \\\"/api/users/profile\\\"\",\"matches\":[],\"totalMatches\":0}",
+      "kind": "source",
+      "label": "evidence-2"
+    },
+    {
+      "excerpt": "{\"query\":\"\\\"profile update conflict\\\" OR \\\"/api/users/profile\\\" OR \\\"409\\\"\",\"matches\":[],\"totalMatches\":0}",
+      "kind": "log",
+      "label": "evidence-3"
+    },
+    {
+      "excerpt": "{\"query\":\"profile OR displayName OR locale OR version\",\"matches\":[],\"totalMatches\":0}",
+      "kind": "source",
+      "label": "evidence-4"
+    },
+    {
+      "excerpt": "export interface ApplicationData {\n  configuration: Record<string, string>;\n  accounts: Array<{ id: string; externalId: string; displayName: string }>;\n  signingKeys: Array<{ id: string; material: string; active: boolean }>;\n  auditSinkAvailable: boolean;\n  profileVersion: number;\n}\n\nexport function selectSigningKey(_keyId: string, data: Readonly<ApplicationData>) {\n  return data.signingKeys[0];\n}\n\nexport function createApplicationData(): ApplicationData {\n  return {\n    configuration: {\n      PAYMENTS_API_KEY: \"sandbox-payment-key\",\n      PAYMENT_RETRY_ENDPOINT: \"https://sandbox.example.test/payment-retry\",\n      LEGACY_PAYMENT_RETRY_ENDPOINT: \"\",\n    },\n    accounts: [\n      { id: \"account-7\", externalId: \"ext-42\", displayName: \"Example Account\" },\n    ],\n    signingKeys: [\n      { id: \"key-retired\", material: \"retired-signing-material\", active: false },\n      { id: \"key-current\", material: \"current-signing-material\", active: true },\n    ],\n    auditSinkAvailable: false,\n    profileVersion: 7,\n  };\n}\n",
+      "kind": "source",
+      "label": "evidence-5"
+    },
+    {
+      "excerpt": "import type { Request, Response } from \"express\";\nimport type { TargetState } from \"../state.js\";\n\nexport function registerUser(request: Request, response: Response, state: TargetState): void {\n  const requestId = response.locals.requestId as string;\n\n  try {\n    const normalizedName = (request.body as { profile: { name: string } }).profile.name.trim();\n    response.status(201).json({ id: \"user-100\", name: normalizedName });\n  } catch (error: unknown) {\n    const message = error instanceof Error ? error.message : \"Unknown registration error\";\n    state.log(requestId, \"error\", \"USER_REGISTRATION_UNHANDLED\", { message });\n    response.status(500).json({ error: \"user registration failed\", requestId });\n  }\n}\n\nexport function assignProfileUpdateVersions(currentVersion: number, updateCount: number): number[] {\n  return Array.from({ length: updateCount }, () => currentVersion + 1);\n}\n\nexport function updateUserProfile(request: Request, response: Response, state: TargetState): void {\n  const requestId = response.locals.requestId as string;\n  const body = request.body as { displayName?: unknown; locale?: unknown };\n  const updateCount = [body.displayName, body.locale].filter((value) => value !== undefined).length;\n  const versions = assignProfileUpdateVersions(state.data().profileVersion, updateCount);\n\n  if (new Set(versions).size !== versions.length) {\n    state.log(requestId, \"error\", \"PROFILE_UPDATE_VERSION_COLLISION\", {\n      currentVersion: state.data().profileVersion,\n      attemptedVersions: versions,\n      updateCount,\n    });\n    response.status(409).json({ error: \"profil",
+      "kind": "source",
+      "label": "evidence-6"
+    },
+    {
+      "excerpt": "{\"status\":409,\"body\":{\"error\":\"profile update conflict\",\"requestId\":\"[correlation-id]\"},\"assertions\":[{\"kind\":\"method\",\"requirement\":\"required\",\"expected\":\"POST\",\"actual\":\"POST\",\"passed\":true},{\"kind\":\"path\",\"requirement\":\"required\",\"expected\":\"/api/users/profile\",\"actual\":\"/api/users/profile\",\"passed\":true},{\"kind\":\"status\",\"requirement\":\"required\",\"expected\":409,\"actual\":409,\"passed\":true},{\"kind\":\"body\",\"requirement\":\"required\",\"expected\":\"profile update conflict\",\"actual\":\"{\\\"error\\\":\\\"profile update conflict\\\",\\\"requestId\\\":\\\"[correlation-id]\\\"}\",\"passed\":true},{\"kind\":\"log\",\"requirement\":\"supporting\",\"expected\":\"PROFILE_UPDATE_VERSION_COLLISION\",\"actual\":\"[{\\\"sequence\\\":1,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"info\\\",\\\"message\\\":\\\"REQUEST_RECEIVED\\\",\\\"details\\\":{\\\"method\\\":\\\"POST\\\",\\\"path\\\":\\\"/api/users/profile\\\"}},{\\\"sequence\\\":2,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"error\\\",\\\"message\\\":\\\"PROFILE_UPDATE_VERSION_COLLISION\\\",\\\"details\\\":{\\\"currentVersion\\\":7,\\\"attemptedVersions\\\":[8,8],\\\"updateCount\\\":2}}]\",\"passed\":true},{\"kind\":\"log\",\"requirement\":\"supporting\",\"expected\":\"\\\"currentVersion\\\":7\",\"actual\":\"[{\\\"sequence\\\":1,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"info\\\",\\\"message\\\":\\\"REQUEST_RECEIVED\\\",\\\"details\\\":{\\\"method\\\":\\\"POST\\\",\\\"path\\\":\\\"/api/users/profile\\\"}},{\\\"sequence\\\":2,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"error\\\",\\\"message\\\":\\\"PROFILE_UPDATE_VERSION_COLLISION\\\",\\\"details\\\":{\\\"currentVersion\\\":7,\\\"attemptedVersions\\\":[8,8],\\\"updateCount\\\":2}}]\",\"passed\":true},{\"kind\":\"log\",\"requirement\":\"supporting\",\"expected\":\"\\\"attemptedV",
+      "kind": "http",
+      "label": "evidence-7"
+    },
+    {
+      "excerpt": "[{\"sequence\":1,\"requestId\":\"[correlation-id]\",\"level\":\"info\",\"message\":\"REQUEST_RECEIVED\",\"details\":{\"method\":\"POST\",\"path\":\"/api/users/profile\"}},{\"sequence\":2,\"requestId\":\"[correlation-id]\",\"level\":\"error\",\"message\":\"PROFILE_UPDATE_VERSION_COLLISION\",\"details\":{\"currentVersion\":7,\"attemptedVersions\":[8,8],\"updateCount\":2}}]",
+      "kind": "log",
+      "label": "evidence-8"
+    }
+  ],
+  "experiments": [
+    {
+      "actualObservation": "{\"status\":409,\"body\":{\"error\":\"profile update conflict\",\"requestId\":\"[correlation-id]\"},\"bodyText\":\"{\\\"error\\\":\\\"profile update conflict\\\",\\\"requestId\\\":\\\"[correlation-id]\\\"}\"}",
+      "evidenceIds": [
+        "evidence-7",
+        "evidence-8"
+      ],
+      "expectedObservation": "{\"required\":{\"method\":\"POST\",\"path\":\"/api/users/profile\",\"status\":409,\"bodyContains\":\"profile update conflict\"},\"supporting\":{\"logContains\":[\"PROFILE_UPDATE_VERSION_COLLISION\",\"\\\"currentVersion\\\":7\",\"\\\"attemptedVersions\\\":[8,8]\",\"\\\"updateCount\\\":2\"]}}",
+      "hypothesisId": "hypothesis-1",
+      "id": "experiment-1",
+      "outcome": "reproduced",
+      "request": {
+        "body": {
+          "displayName": "Ada Lovelace",
+          "locale": "en-PH"
+        },
+        "method": "POST",
+        "path": "/api/users/profile"
+      }
+    }
+  ],
+  "failureReport": {
+    "endpoint": "/api/users/profile",
+    "method": "POST",
+    "observedError": "profile update conflict",
+    "observedStatus": 409,
+    "requestContext": {
+      "body": {
+        "displayName": "Ada Lovelace",
+        "locale": "en-PH"
+      }
+    },
+    "summary": "A request containing two valid profile field updates returns a version conflict."
+  },
+  "hypothesisRevisions": [
+    {
+      "confidence": 0.99,
+      "contradictingEvidenceIds": [],
+      "faultCategory": "concurrency",
+      "id": "hypothesis-1",
+      "mechanism": "assignProfileUpdateVersions creates every entry as currentVersion + 1 rather than allocating successive versions. For the reported two-field body, updateCount is 2, so profileVersion 7 produces [8, 8]. updateUserProfile detects the duplicate via Set size comparison and returns the observed 409 with \"profile update conflict\".",
+      "statement": "Multi-field profile updates deterministically receive duplicate version numbers, causing the handler to reject valid updates as a conflict.",
+      "status": "proposed",
+      "supportingEvidenceIds": [
+        "evidence-1",
+        "evidence-6",
+        "evidence-5"
+      ],
+      "suspectedSourceFile": "src/target-api/scenarios/user-registration.ts",
+      "suspectedSymbol": "assignProfileUpdateVersions",
+      "verificationPlan": "Test assignProfileUpdateVersions(7, 2) and confirm it returns duplicate versions [8, 8], then change allocation to successive values such as [8, 9] and invoke POST /api/users/profile with both displayName and locale. Confirm the response changes from 409 to 200 with applied: 2 and version: 9, while zero- and one-field behavior remains valid."
+    },
+    {
+      "confidence": 0.99,
+      "contradictingEvidenceIds": [],
+      "faultCategory": "concurrency",
+      "id": "hypothesis-1",
+      "mechanism": "assignProfileUpdateVersions creates every entry as currentVersion + 1 rather than allocating successive versions. For the reported two-field body, updateCount is 2, so profileVersion 7 produces [8, 8]. updateUserProfile detects the duplicate via Set size comparison and returns the observed 409 with \"profile update conflict\".",
+      "statement": "Multi-field profile updates deterministically receive duplicate version numbers, causing the handler to reject valid updates as a conflict.",
+      "status": "tested",
+      "supportingEvidenceIds": [
+        "evidence-1",
+        "evidence-6",
+        "evidence-5"
+      ],
+      "suspectedSourceFile": "src/target-api/scenarios/user-registration.ts",
+      "suspectedSymbol": "assignProfileUpdateVersions",
+      "verificationPlan": "Test assignProfileUpdateVersions(7, 2) and confirm it returns duplicate versions [8, 8], then change allocation to successive values such as [8, 9] and invoke POST /api/users/profile with both displayName and locale. Confirm the response changes from 409 to 200 with applied: 2 and version: 9, while zero- and one-field behavior remains valid."
+    },
+    {
+      "confidence": 0.99,
+      "contradictingEvidenceIds": [],
+      "faultCategory": "concurrency",
+      "id": "hypothesis-1",
+      "mechanism": "assignProfileUpdateVersions creates every entry as currentVersion + 1 rather than allocating successive versions. For the reported two-field body, updateCount is 2, so profileVersion 7 produces [8, 8]. updateUserProfile detects the duplicate via Set size comparison and returns the observed 409 with \"profile update conflict\".",
+      "statement": "Multi-field profile updates deterministically receive duplicate version numbers, causing the handler to reject valid updates as a conflict.",
+      "status": "supported",
+      "supportingEvidenceIds": [
+        "evidence-1",
+        "evidence-6",
+        "evidence-5"
+      ],
+      "suspectedSourceFile": "src/target-api/scenarios/user-registration.ts",
+      "suspectedSymbol": "assignProfileUpdateVersions",
+      "verificationPlan": "Test assignProfileUpdateVersions(7, 2) and confirm it returns duplicate versions [8, 8], then change allocation to successive values such as [8, 9] and invoke POST /api/users/profile with both displayName and locale. Confirm the response changes from 409 to 200 with applied: 2 and version: 9, while zero- and one-field behavior remains valid."
+    }
+  ],
+  "label": "multi-step source exploration",
+  "metrics": {
+    "durationMs": 33768.365,
+    "investigationRounds": 1,
+    "llmCalls": 9,
+    "reproductionAttempts": 1,
+    "toolCalls": 6,
+    "totalTokens": 33176
+  },
+  "outcome": {
+    "diagnosis": {
+      "category": "concurrency",
+      "causalMechanism": "assignProfileUpdateVersions creates every entry as currentVersion + 1 rather than allocating successive versions. For the reported two-field body, updateCount is 2, so profileVersion 7 produces [8, 8]. updateUserProfile detects the duplicate via Set size comparison and returns the observed 409 with \"profile update conflict\".",
+      "confidence": 0.99,
+      "evidenceIds": [
+        "evidence-1",
+        "evidence-6",
+        "evidence-5",
+        "evidence-7",
+        "evidence-8"
+      ],
+      "explanation": "The source establishes the complete causal path: both supplied fields produce updateCount=2; assignProfileUpdateVersions returns currentVersion+1 for every entry; with profileVersion 7 this yields [8,8]; the duplicate Set-size check then emits the collision log and returns HTTP 409 with \"profile update conflict.\" An exact-runtime reproduction using the reported method, path, and body produced that predicted allocation, diagnostic log, status, and response. This demonstrates an upstream deterministic allocation defect rather than mere correlation with the 409 symptom.",
+      "limitations": [
+        "The proposed successive-version fix and its claimed 200 response were not tested; verification applies to the diagnosed cause, not to remediation correctness or zero-/one-field regression behavior.",
+        "The mechanism is deterministic within one request; the evidence does not establish an inter-request concurrency race, despite the hypothesis's concurrency category.",
+        "The source/log search results reporting no matches are inconsistent with the subsequently retrieved source and reproduction logs, but they do not contradict the directly observed causal path."
+      ],
+      "reproductionSummary": "Reproduced with [correlation-id]; observed failure signature matched.",
+      "sourceFile": "src/target-api/scenarios/user-registration.ts",
+      "status": "verified",
+      "symbol": "assignProfileUpdateVersions"
+    },
+    "terminationReason": "verified",
+    "unsupportedClaimCount": 0
+  },
+  "promptVersions": {
+    "investigator": "investigator-v1",
+    "reproducer": "reproducer-v2",
+    "verifier": "verifier-v2"
+  },
+  "repetition": 3,
+  "schemaVersion": "submission-trajectory-v1",
+  "sourceSchemaVersion": "agentic-trajectory-v3",
+  "steps": [
+    {
+      "action": "investigation_started",
+      "details": {
+        "failureReport": {
+          "endpoint": "/api/users/profile",
+          "method": "POST",
+          "observedError": "profile update conflict",
+          "observedStatus": 409,
+          "requestContext": {
+            "body": {
+              "displayName": "Ada Lovelace",
+              "locale": "en-PH"
+            }
+          },
+          "summary": "A request containing two valid profile field updates returns a version conflict."
+        }
+      },
+      "role": "orchestrator",
+      "sequence": 1
+    },
+    {
+      "action": "search_source",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 1,
+        "reproductionAttempts": 0,
+        "totalTokens": 1504,
+        "totalToolCalls": 0
+      },
+      "details": {
+        "action": "search_source",
+        "arguments": {
+          "query": "\"profile update conflict\" OR \"/api/users/profile\""
+        },
+        "reason": "Locate the endpoint implementation and the exact branch producing the reported 409 before forming causal hypotheses."
+      },
+      "evidence": [],
+      "role": "investigator",
+      "sequence": 3
+    },
+    {
+      "action": "tool-invocation",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 1,
+        "reproductionAttempts": 0,
+        "totalTokens": 1504,
+        "totalToolCalls": 1
+      },
+      "details": {
+        "arguments": {
+          "query": "\"profile update conflict\" OR \"/api/users/profile\""
+        },
+        "tool": "search_source"
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 4,
+      "tool": "search_source"
+    },
+    {
+      "action": "tool-result",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 1,
+        "reproductionAttempts": 0,
+        "totalTokens": 1504,
+        "totalToolCalls": 1
+      },
+      "details": {
+        "durationMs": 2.324,
+        "ok": true,
+        "tool": "search_source",
+        "truncated": false
+      },
+      "evidence": [
+        "evidence-2"
+      ],
+      "role": "orchestrator",
+      "sequence": 6,
+      "tool": "search_source"
+    },
+    {
+      "action": "search_logs",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 2,
+        "reproductionAttempts": 0,
+        "totalTokens": 3391,
+        "totalToolCalls": 1
+      },
+      "details": {
+        "action": "search_logs",
+        "arguments": {
+          "query": "\"profile update conflict\" OR \"/api/users/profile\" OR \"409\""
+        },
+        "reason": "The endpoint and error text are absent from the available source search, so inspect runtime logs for the request path, conflict origin, stack trace, version values, or component name before forming hypotheses."
+      },
+      "evidence": [],
+      "role": "investigator",
+      "sequence": 7
+    },
+    {
+      "action": "tool-invocation",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 2,
+        "reproductionAttempts": 0,
+        "totalTokens": 3391,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "arguments": {
+          "query": "\"profile update conflict\" OR \"/api/users/profile\" OR \"409\""
+        },
+        "tool": "search_logs"
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 8,
+      "tool": "search_logs"
+    },
+    {
+      "action": "tool-result",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 2,
+        "reproductionAttempts": 0,
+        "totalTokens": 3391,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "durationMs": 0.419,
+        "ok": true,
+        "tool": "search_logs",
+        "truncated": false
+      },
+      "evidence": [
+        "evidence-3"
+      ],
+      "role": "orchestrator",
+      "sequence": 10,
+      "tool": "search_logs"
+    },
+    {
+      "action": "search_source",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 3,
+        "reproductionAttempts": 0,
+        "totalTokens": 5653,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "action": "search_source",
+        "arguments": {
+          "query": "profile OR displayName OR locale OR version"
+        },
+        "reason": "Exact route and error text were not found, so broaden the source search to the request fields and likely optimistic-concurrency terminology to identify the responsible implementation or shared data layer."
+      },
+      "evidence": [],
+      "role": "investigator",
+      "sequence": 11
+    },
+    {
+      "action": "tool-invocation",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 3,
+        "reproductionAttempts": 0,
+        "totalTokens": 5653,
+        "totalToolCalls": 3
+      },
+      "details": {
+        "arguments": {
+          "query": "profile OR displayName OR locale OR version"
+        },
+        "tool": "search_source"
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 12,
+      "tool": "search_source"
+    },
+    {
+      "action": "tool-result",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 3,
+        "reproductionAttempts": 0,
+        "totalTokens": 5653,
+        "totalToolCalls": 3
+      },
+      "details": {
+        "durationMs": 3.246,
+        "ok": true,
+        "tool": "search_source",
+        "truncated": false
+      },
+      "evidence": [
+        "evidence-4"
+      ],
+      "role": "orchestrator",
+      "sequence": 14,
+      "tool": "search_source"
+    },
+    {
+      "action": "read_source",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 4,
+        "reproductionAttempts": 0,
+        "totalTokens": 8306,
+        "totalToolCalls": 3
+      },
+      "details": {
+        "action": "read_source",
+        "arguments": {
+          "path": "src/target-api/application-data.ts"
+        },
+        "reason": "The available scenario filenames do not identify the reported profile endpoint, while broad source searches returned no matches. Inspect the central application-data module for route/scenario registration, aliases, generated handlers, or shared optimistic-concurrency behavior that could map the request to one of the listed implementations."
+      },
+      "evidence": [],
+      "role": "investigator",
+      "sequence": 15
+    },
+    {
+      "action": "tool-invocation",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 4,
+        "reproductionAttempts": 0,
+        "totalTokens": 8306,
+        "totalToolCalls": 4
+      },
+      "details": {
+        "arguments": {
+          "path": "src/target-api/application-data.ts"
+        },
+        "tool": "read_source"
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 16,
+      "tool": "read_source"
+    },
+    {
+      "action": "tool-result",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 4,
+        "reproductionAttempts": 0,
+        "totalTokens": 8306,
+        "totalToolCalls": 4
+      },
+      "details": {
+        "durationMs": 7.531,
+        "ok": true,
+        "tool": "read_source",
+        "truncated": false
+      },
+      "evidence": [
+        "evidence-5"
+      ],
+      "role": "orchestrator",
+      "sequence": 18,
+      "tool": "read_source"
+    },
+    {
+      "action": "read_source",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 5,
+        "reproductionAttempts": 0,
+        "totalTokens": 11569,
+        "totalToolCalls": 4
+      },
+      "details": {
+        "action": "read_source",
+        "arguments": {
+          "path": "src/target-api/scenarios/user-registration.ts"
+        },
+        "reason": "The failing route concerns user profile mutation, and application-data.ts exposes profileVersion without implementing the update. Inspect the user-focused scenario module for the handler and version-check mechanism before proposing a causal hypothesis."
+      },
+      "evidence": [],
+      "role": "investigator",
+      "sequence": 19
+    },
+    {
+      "action": "tool-invocation",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 5,
+        "reproductionAttempts": 0,
+        "totalTokens": 11569,
+        "totalToolCalls": 5
+      },
+      "details": {
+        "arguments": {
+          "path": "src/target-api/scenarios/user-registration.ts"
+        },
+        "tool": "read_source"
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 20,
+      "tool": "read_source"
+    },
+    {
+      "action": "tool-result",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 5,
+        "reproductionAttempts": 0,
+        "totalTokens": 11569,
+        "totalToolCalls": 5
+      },
+      "details": {
+        "durationMs": 5.08,
+        "ok": true,
+        "tool": "read_source",
+        "truncated": false
+      },
+      "evidence": [
+        "evidence-6"
+      ],
+      "role": "orchestrator",
+      "sequence": 22,
+      "tool": "read_source"
+    },
+    {
+      "action": "propose_hypotheses",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 6,
+        "reproductionAttempts": 0,
+        "totalTokens": 15737,
+        "totalToolCalls": 5
+      },
+      "details": {
+        "action": "propose_hypotheses",
+        "arguments": {
+          "hypotheses": [
+            {
+              "confidence": 0.99,
+              "contradictingEvidenceIds": [],
+              "faultCategory": "concurrency",
+              "id": "hypothesis-1",
+              "mechanism": "assignProfileUpdateVersions creates every entry as currentVersion + 1 rather than allocating successive versions. For the reported two-field body, updateCount is 2, so profileVersion 7 produces [8, 8]. updateUserProfile detects the duplicate via Set size comparison and returns the observed 409 with \"profile update conflict\".",
+              "statement": "Multi-field profile updates deterministically receive duplicate version numbers, causing the handler to reject valid updates as a conflict.",
+              "supportingEvidenceIds": [
+                "evidence-1",
+                "evidence-6",
+                "evidence-5"
+              ],
+              "suspectedFile": "src/target-api/scenarios/user-registration.ts",
+              "suspectedSymbol": "assignProfileUpdateVersions",
+              "verificationPlan": "Test assignProfileUpdateVersions(7, 2) and confirm it returns duplicate versions [8, 8], then change allocation to successive values such as [8, 9] and invoke POST /api/users/profile with both displayName and locale. Confirm the response changes from 409 to 200 with applied: 2 and version: 9, while zero- and one-field behavior remains valid."
+            }
+          ]
+        },
+        "reason": "The handler source directly explains the request-specific conflict: supplying both reported fields makes updateCount equal 2, while the version allocator assigns the same next version to both updates and the duplicate check deliberately emits the reported status and error."
+      },
+      "evidence": [
+        "evidence-1",
+        "evidence-6",
+        "evidence-5"
+      ],
+      "role": "investigator",
+      "sequence": 23
+    },
+    {
+      "action": "hypothesis-change",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 6,
+        "reproductionAttempts": 0,
+        "totalTokens": 15737,
+        "totalToolCalls": 5
+      },
+      "details": {
+        "activeHypothesisIds": [
+          "hypothesis-1"
+        ]
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 25
+    },
+    {
+      "action": "request_reproduction",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 7,
+        "reproductionAttempts": 0,
+        "totalTokens": 20274,
+        "totalToolCalls": 5
+      },
+      "details": {
+        "action": "request_reproduction",
+        "arguments": {
+          "hypothesisId": "hypothesis-1"
+        },
+        "reason": "The active hypothesis is concrete and directly supported by the handler implementation: two supplied fields produce updateCount 2, and assignProfileUpdateVersions allocates duplicate versions. A focused reproduction can confirm the predicted [8, 8] allocation and resulting 409 before any fix is considered verified."
+      },
+      "evidence": [],
+      "role": "investigator",
+      "sequence": 26
+    },
+    {
+      "action": "role-decision",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 8,
+        "reproductionAttempts": 0,
+        "totalTokens": 25025,
+        "totalToolCalls": 5
+      },
+      "details": {
+        "expected": {
+          "supporting": {
+            "logContains": [
+              "PROFILE_UPDATE_VERSION_COLLISION",
+              "\"currentVersion\":7",
+              "\"attemptedVersions\":[8,8]",
+              "\"updateCount\":2"
+            ]
+          }
+        },
+        "hypothesisId": "hypothesis-1",
+        "reason": "The smallest controlled experiment is the exact reported two-field update. Both fields make updateCount 2; the hypothesized allocator should assign duplicate versions [8,8], producing the diagnostic collision log. The orchestrator separately evaluates the immutable reported 409 response signature.",
+        "request": {
+          "body": {
+            "displayName": "Ada Lovelace",
+            "locale": "en-PH"
+          },
+          "method": "POST",
+          "path": "/api/users/profile"
+        }
+      },
+      "evidence": [],
+      "role": "reproducer",
+      "sequence": 27
+    },
+    {
+      "action": "tool-invocation",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 8,
+        "reproductionAttempts": 1,
+        "totalTokens": 25025,
+        "totalToolCalls": 6
+      },
+      "details": {
+        "arguments": {
+          "expectations": {
+            "required": {
+              "bodyContains": "profile update conflict",
+              "method": "POST",
+              "path": "/api/users/profile",
+              "status": 409
+            },
+            "supporting": {
+              "logContains": [
+                "PROFILE_UPDATE_VERSION_COLLISION",
+                "\"currentVersion\":7",
+                "\"attemptedVersions\":[8,8]",
+                "\"updateCount\":2"
+              ]
+            }
+          },
+          "request": {
+            "body": {
+              "displayName": "Ada Lovelace",
+              "locale": "en-PH"
+            },
+            "method": "POST",
+            "path": "/api/users/profile"
+          }
+        },
+        "tool": "execute_reproduction"
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 28,
+      "tool": "execute_reproduction"
+    },
+    {
+      "action": "tool-result",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 8,
+        "reproductionAttempts": 1,
+        "totalTokens": 25025,
+        "totalToolCalls": 6
+      },
+      "details": {
+        "durationMs": 15.808,
+        "ok": true,
+        "tool": "execute_reproduction",
+        "truncated": false
+      },
+      "evidence": [
+        "evidence-7",
+        "evidence-8"
+      ],
+      "role": "orchestrator",
+      "sequence": 31,
+      "tool": "execute_reproduction"
+    },
+    {
+      "action": "reproduction-result",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 8,
+        "reproductionAttempts": 1,
+        "totalTokens": 25025,
+        "totalToolCalls": 6
+      },
+      "details": {
+        "hypothesisId": "hypothesis-1",
+        "outcome": "reproduced"
+      },
+      "evidence": [
+        "evidence-7",
+        "evidence-8"
+      ],
+      "role": "orchestrator",
+      "sequence": 34
+    },
+    {
+      "action": "role-decision",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 9,
+        "reproductionAttempts": 1,
+        "totalTokens": 33176,
+        "totalToolCalls": 6
+      },
+      "details": {
+        "evidenceIds": [
+          "evidence-1",
+          "evidence-6",
+          "evidence-5",
+          "evidence-7",
+          "evidence-8"
+        ],
+        "explanation": "The source establishes the complete causal path: both supplied fields produce updateCount=2; assignProfileUpdateVersions returns currentVersion+1 for every entry; with profileVersion 7 this yields [8,8]; the duplicate Set-size check then emits the collision log and returns HTTP 409 with \"profile update conflict.\" An exact-runtime reproduction using the reported method, path, and body produced that predicted allocation, diagnostic log, status, and response. This demonstrates an upstream deterministic allocation defect rather than mere correlation with the 409 symptom.",
+        "hypothesisId": "hypothesis-1",
+        "limitations": [
+          "The proposed successive-version fix and its claimed 200 response were not tested; verification applies to the diagnosed cause, not to remediation correctness or zero-/one-field regression behavior.",
+          "The mechanism is deterministic within one request; the evidence does not establish an inter-request concurrency race, despite the hypothesis's concurrency category.",
+          "The source/log search results reporting no matches are inconsistent with the subsequently retrieved source and reproduction logs, but they do not contradict the directly observed causal path."
+        ],
+        "missingEvidenceRequest": null,
+        "outcome": "verified",
+        "unsupportedClaims": []
+      },
+      "evidence": [
+        "evidence-1",
+        "evidence-6",
+        "evidence-5",
+        "evidence-7",
+        "evidence-8"
+      ],
+      "role": "verifier",
+      "sequence": 35
+    },
+    {
+      "action": "verifier-feedback",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 9,
+        "reproductionAttempts": 1,
+        "totalTokens": 33176,
+        "totalToolCalls": 6
+      },
+      "details": {
+        "evidenceIds": [
+          "evidence-1",
+          "evidence-6",
+          "evidence-5",
+          "evidence-7",
+          "evidence-8"
+        ],
+        "explanation": "The source establishes the complete causal path: both supplied fields produce updateCount=2; assignProfileUpdateVersions returns currentVersion+1 for every entry; with profileVersion 7 this yields [8,8]; the duplicate Set-size check then emits the collision log and returns HTTP 409 with \"profile update conflict.\" An exact-runtime reproduction using the reported method, path, and body produced that predicted allocation, diagnostic log, status, and response. This demonstrates an upstream deterministic allocation defect rather than mere correlation with the 409 symptom.",
+        "hypothesisId": "hypothesis-1",
+        "limitations": [
+          "The proposed successive-version fix and its claimed 200 response were not tested; verification applies to the diagnosed cause, not to remediation correctness or zero-/one-field regression behavior.",
+          "The mechanism is deterministic within one request; the evidence does not establish an inter-request concurrency race, despite the hypothesis's concurrency category.",
+          "The source/log search results reporting no matches are inconsistent with the subsequently retrieved source and reproduction logs, but they do not contradict the directly observed causal path."
+        ],
+        "missingEvidenceRequest": null,
+        "outcome": "verified",
+        "unsupportedClaims": []
+      },
+      "evidence": [
+        "evidence-1",
+        "evidence-6",
+        "evidence-5",
+        "evidence-7",
+        "evidence-8"
+      ],
+      "role": "verifier",
+      "sequence": 36
+    },
+    {
+      "action": "hypothesis-change",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 9,
+        "reproductionAttempts": 1,
+        "totalTokens": 33176,
+        "totalToolCalls": 6
+      },
+      "details": {
+        "hypothesisId": "hypothesis-1",
+        "status": "supported"
+      },
+      "evidence": [
+        "evidence-1",
+        "evidence-6",
+        "evidence-5",
+        "evidence-7",
+        "evidence-8"
+      ],
+      "role": "orchestrator",
+      "sequence": 38
+    },
+    {
+      "action": "termination",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 9,
+        "reproductionAttempts": 1,
+        "totalTokens": 33176,
+        "totalToolCalls": 6
+      },
+      "details": {
+        "finalStatus": "verified",
+        "reason": "verified"
+      },
+      "evidence": [
+        "evidence-1",
+        "evidence-6",
+        "evidence-5",
+        "evidence-7",
+        "evidence-8"
+      ],
+      "role": "orchestrator",
+      "sequence": 39
+    }
+  ]
+}

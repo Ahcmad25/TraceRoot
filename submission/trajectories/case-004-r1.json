@@ -1,0 +1,618 @@
+{
+  "caseId": "case-004",
+  "evidence": [
+    {
+      "excerpt": "{\"summary\":\"Looking up an existing account by external ID returns HTTP 500.\",\"endpoint\":\"/api/accounts/ext-42\",\"method\":\"GET\",\"observedStatus\":500,\"observedError\":\"account resolution failed\",\"requestContext\":{\"externalId\":\"ext-42\"}}",
+      "kind": "report",
+      "label": "evidence-1"
+    },
+    {
+      "excerpt": "import type { Request, Response } from \"express\";\nimport { selectSigningKey } from \"../application-data.js\";\nimport type { TargetState } from \"../state.js\";\n\nexport function findAccountByExternalId(externalId: string, state: TargetState) {\n  return state.data().accounts.find((account) => account.id === externalId);\n}\n\nfunction publishLookupFailureAudit(state: TargetState): void {\n  if (!state.data().auditSinkAvailable) {\n    throw new Error(\"audit sink connection refused\");\n  }\n}\n\nexport function getAccount(request: Request, response: Response, state: TargetState): void {\n  const requestId = response.locals.requestId as string;\n  const rawExternalId = request.params.externalId;\n  const externalId = Array.isArray(rawExternalId)\n    ? rawExternalId[0] ?? \"\"\n    : rawExternalId ?? \"\";\n  const account = findAccountByExternalId(externalId, state);\n\n  if (account === undefined) {\n    state.log(requestId, \"warn\", \"ACCOUNT_LOOKUP_RETURNED_NO_RESULT\", { externalId });\n    try {\n      publishLookupFailureAudit(state);\n    } catch (error: unknown) {\n      state.log(requestId, \"error\", \"AUDIT_PIPELINE_FATAL_DELIVERY_FAILURE\", {\n        message: error instanceof Error ? error.message : \"unknown audit failure\",\n      });\n    }\n    response.status(500).json({ error: \"account resolution failed\", requestId });\n    return;\n  }\n\n  response.status(200).json(account);\n}\n\nexport function validateSession(request: Request, response: Response, state: TargetState): void {\n  const requestId = response.locals.requestId as string;\n  const rawKeyId = request.params.keyId;\n  const requestedKeyId = Array.",
+      "kind": "source",
+      "label": "evidence-2"
+    },
+    {
+      "excerpt": "export interface ApplicationData {\n  configuration: Record<string, string>;\n  accounts: Array<{ id: string; externalId: string; displayName: string }>;\n  signingKeys: Array<{ id: string; material: string; active: boolean }>;\n  auditSinkAvailable: boolean;\n  profileVersion: number;\n}\n\nexport function selectSigningKey(_keyId: string, data: Readonly<ApplicationData>) {\n  return data.signingKeys[0];\n}\n\nexport function createApplicationData(): ApplicationData {\n  return {\n    configuration: {\n      PAYMENTS_API_KEY: \"sandbox-payment-key\",\n      PAYMENT_RETRY_ENDPOINT: \"https://sandbox.example.test/payment-retry\",\n      LEGACY_PAYMENT_RETRY_ENDPOINT: \"\",\n    },\n    accounts: [\n      { id: \"account-7\", externalId: \"ext-42\", displayName: \"Example Account\" },\n    ],\n    signingKeys: [\n      { id: \"key-retired\", material: \"retired-signing-material\", active: false },\n      { id: \"key-current\", material: \"current-signing-material\", active: true },\n    ],\n    auditSinkAvailable: false,\n    profileVersion: 7,\n  };\n}\n",
+      "kind": "source",
+      "label": "evidence-3"
+    },
+    {
+      "excerpt": "{\"status\":500,\"body\":{\"error\":\"account resolution failed\",\"requestId\":\"[correlation-id]\"},\"assertions\":[{\"kind\":\"method\",\"requirement\":\"required\",\"expected\":\"GET\",\"actual\":\"GET\",\"passed\":true},{\"kind\":\"path\",\"requirement\":\"required\",\"expected\":\"/api/accounts/ext-42\",\"actual\":\"/api/accounts/ext-42\",\"passed\":true},{\"kind\":\"status\",\"requirement\":\"required\",\"expected\":500,\"actual\":500,\"passed\":true},{\"kind\":\"body\",\"requirement\":\"required\",\"expected\":\"account resolution failed\",\"actual\":\"{\\\"error\\\":\\\"account resolution failed\\\",\\\"requestId\\\":\\\"[correlation-id]\\\"}\",\"passed\":true},{\"kind\":\"log\",\"requirement\":\"supporting\",\"expected\":\"ACCOUNT_LOOKUP_RETURNED_NO_RESULT\",\"actual\":\"[{\\\"sequence\\\":1,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"info\\\",\\\"message\\\":\\\"REQUEST_RECEIVED\\\",\\\"details\\\":{\\\"method\\\":\\\"GET\\\",\\\"path\\\":\\\"/api/accounts/ext-42\\\"}},{\\\"sequence\\\":2,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"warn\\\",\\\"message\\\":\\\"ACCOUNT_LOOKUP_RETURNED_NO_RESULT\\\",\\\"details\\\":{\\\"externalId\\\":\\\"ext-42\\\"}},{\\\"sequence\\\":3,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"error\\\",\\\"message\\\":\\\"AUDIT_PIPELINE_FATAL_DELIVERY_FAILURE\\\",\\\"details\\\":{\\\"message\\\":\\\"audit sink connection refused\\\"}}]\",\"passed\":true},{\"kind\":\"log\",\"requirement\":\"supporting\",\"expected\":\"\\\"externalId\\\":\\\"ext-42\\\"\",\"actual\":\"[{\\\"sequence\\\":1,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"info\\\",\\\"message\\\":\\\"REQUEST_RECEIVED\\\",\\\"details\\\":{\\\"method\\\":\\\"GET\\\",\\\"path\\\":\\\"/api/accounts/ext-42\\\"}},{\\\"sequence\\\":2,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"warn\\\",\\\"message\\\":\\\"ACCOUNT_LOOKUP_RETURNED_NO_RESULT\\\",\\\"d",
+      "kind": "http",
+      "label": "evidence-4"
+    },
+    {
+      "excerpt": "[{\"sequence\":1,\"requestId\":\"[correlation-id]\",\"level\":\"info\",\"message\":\"REQUEST_RECEIVED\",\"details\":{\"method\":\"GET\",\"path\":\"/api/accounts/ext-42\"}},{\"sequence\":2,\"requestId\":\"[correlation-id]\",\"level\":\"warn\",\"message\":\"ACCOUNT_LOOKUP_RETURNED_NO_RESULT\",\"details\":{\"externalId\":\"ext-42\"}},{\"sequence\":3,\"requestId\":\"[correlation-id]\",\"level\":\"error\",\"message\":\"AUDIT_PIPELINE_FATAL_DELIVERY_FAILURE\",\"details\":{\"message\":\"audit sink connection refused\"}}]",
+      "kind": "log",
+      "label": "evidence-5"
+    }
+  ],
+  "experiments": [
+    {
+      "actualObservation": "{\"status\":500,\"body\":{\"error\":\"account resolution failed\",\"requestId\":\"[correlation-id]\"},\"bodyText\":\"{\\\"error\\\":\\\"account resolution failed\\\",\\\"requestId\\\":\\\"[correlation-id]\\\"}\"}",
+      "evidenceIds": [
+        "evidence-4",
+        "evidence-5"
+      ],
+      "expectedObservation": "{\"required\":{\"method\":\"GET\",\"path\":\"/api/accounts/ext-42\",\"status\":500,\"bodyContains\":\"account resolution failed\"},\"supporting\":{\"logContains\":[\"ACCOUNT_LOOKUP_RETURNED_NO_RESULT\",\"\\\"externalId\\\":\\\"ext-42\\\"\"]}}",
+      "hypothesisId": "hypothesis-1",
+      "id": "experiment-1",
+      "outcome": "reproduced",
+      "request": {
+        "method": "GET",
+        "path": "/api/accounts/ext-42"
+      }
+    }
+  ],
+  "failureReport": {
+    "endpoint": "/api/accounts/ext-42",
+    "method": "GET",
+    "observedError": "account resolution failed",
+    "observedStatus": 500,
+    "requestContext": {
+      "externalId": "ext-42"
+    },
+    "summary": "Looking up an existing account by external ID returns HTTP 500."
+  },
+  "hypothesisRevisions": [
+    {
+      "confidence": 0.99,
+      "contradictingEvidenceIds": [],
+      "faultCategory": "data-access",
+      "id": "hypothesis-1",
+      "mechanism": "The predicate compares account.id to externalId. The ext-42 record has id \"account-7\" and externalId \"ext-42\", so the predicate returns no match and getAccount follows its HTTP 500 no-result branch.",
+      "statement": "The account lookup searches the internal account ID instead of the external ID supplied by the route, causing the existing ext-42 account to be treated as missing.",
+      "status": "proposed",
+      "supportingEvidenceIds": [
+        "evidence-1",
+        "evidence-2",
+        "evidence-3"
+      ],
+      "suspectedSourceFile": "src/target-api/scenarios/account-lookup.ts",
+      "suspectedSymbol": "findAccountByExternalId",
+      "verificationPlan": "Exercise findAccountByExternalId(\"ext-42\", state) with createApplicationData() and confirm it currently returns undefined despite a record whose externalId is \"ext-42\". Then change the predicate to account.externalId === externalId and verify GET /api/accounts/ext-42 returns HTTP 200 with the account-7 record."
+    },
+    {
+      "confidence": 0.99,
+      "contradictingEvidenceIds": [],
+      "faultCategory": "data-access",
+      "id": "hypothesis-1",
+      "mechanism": "The predicate compares account.id to externalId. The ext-42 record has id \"account-7\" and externalId \"ext-42\", so the predicate returns no match and getAccount follows its HTTP 500 no-result branch.",
+      "statement": "The account lookup searches the internal account ID instead of the external ID supplied by the route, causing the existing ext-42 account to be treated as missing.",
+      "status": "tested",
+      "supportingEvidenceIds": [
+        "evidence-1",
+        "evidence-2",
+        "evidence-3"
+      ],
+      "suspectedSourceFile": "src/target-api/scenarios/account-lookup.ts",
+      "suspectedSymbol": "findAccountByExternalId",
+      "verificationPlan": "Exercise findAccountByExternalId(\"ext-42\", state) with createApplicationData() and confirm it currently returns undefined despite a record whose externalId is \"ext-42\". Then change the predicate to account.externalId === externalId and verify GET /api/accounts/ext-42 returns HTTP 200 with the account-7 record."
+    },
+    {
+      "confidence": 0.99,
+      "contradictingEvidenceIds": [],
+      "faultCategory": "data-access",
+      "id": "hypothesis-1",
+      "mechanism": "The predicate compares account.id to externalId. The ext-42 record has id \"account-7\" and externalId \"ext-42\", so the predicate returns no match and getAccount follows its HTTP 500 no-result branch.",
+      "statement": "The account lookup searches the internal account ID instead of the external ID supplied by the route, causing the existing ext-42 account to be treated as missing.",
+      "status": "supported",
+      "supportingEvidenceIds": [
+        "evidence-1",
+        "evidence-2",
+        "evidence-3"
+      ],
+      "suspectedSourceFile": "src/target-api/scenarios/account-lookup.ts",
+      "suspectedSymbol": "findAccountByExternalId",
+      "verificationPlan": "Exercise findAccountByExternalId(\"ext-42\", state) with createApplicationData() and confirm it currently returns undefined despite a record whose externalId is \"ext-42\". Then change the predicate to account.externalId === externalId and verify GET /api/accounts/ext-42 returns HTTP 200 with the account-7 record."
+    }
+  ],
+  "label": "misleading secondary symptom",
+  "metrics": {
+    "durationMs": 23975.418,
+    "investigationRounds": 1,
+    "llmCalls": 6,
+    "reproductionAttempts": 1,
+    "toolCalls": 3,
+    "totalTokens": 22623
+  },
+  "outcome": {
+    "diagnosis": {
+      "category": "data-access",
+      "causalMechanism": "The predicate compares account.id to externalId. The ext-42 record has id \"account-7\" and externalId \"ext-42\", so the predicate returns no match and getAccount follows its HTTP 500 no-result branch.",
+      "confidence": 0.99,
+      "evidenceIds": [
+        "evidence-2",
+        "evidence-3",
+        "evidence-4",
+        "evidence-5",
+        "evidence-1"
+      ],
+      "explanation": "The evidence directly establishes the causal chain. `findAccountByExternalId` compares the route-supplied `externalId` against `account.id`. The application data contains the requested account as `{ id: \"account-7\", externalId: \"ext-42\" }`, so searching for `\"ext-42\"` by `id` necessarily returns no match. The handler then deterministically enters its no-result branch and returns HTTP 500 with `account resolution failed`. The matching-runtime reproduction confirms the same request, response, and `ACCOUNT_LOOKUP_RETURNED_NO_RESULT` path. The audit-sink failure is secondary: it occurs only after the lookup has failed, is caught, and does not determine the response branch.",
+      "limitations": [
+        "No patched counterfactual run is provided to demonstrate that changing the predicate to `account.externalId === externalId` produces HTTP 200; however, the supplied source, fixture data, and matching reproduction directly establish the reported causal path."
+      ],
+      "reproductionSummary": "Reproduced with [correlation-id]; observed failure signature matched.",
+      "sourceFile": "src/target-api/scenarios/account-lookup.ts",
+      "status": "verified",
+      "symbol": "findAccountByExternalId"
+    },
+    "terminationReason": "verified",
+    "unsupportedClaimCount": 0
+  },
+  "promptVersions": {
+    "investigator": "investigator-v1",
+    "reproducer": "reproducer-v2",
+    "verifier": "verifier-v2"
+  },
+  "repetition": 1,
+  "schemaVersion": "submission-trajectory-v1",
+  "sourceSchemaVersion": "agentic-trajectory-v3",
+  "steps": [
+    {
+      "action": "investigation_started",
+      "details": {
+        "failureReport": {
+          "endpoint": "/api/accounts/ext-42",
+          "method": "GET",
+          "observedError": "account resolution failed",
+          "observedStatus": 500,
+          "requestContext": {
+            "externalId": "ext-42"
+          },
+          "summary": "Looking up an existing account by external ID returns HTTP 500."
+        }
+      },
+      "role": "orchestrator",
+      "sequence": 1
+    },
+    {
+      "action": "read_source",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 1,
+        "reproductionAttempts": 0,
+        "totalTokens": 1481,
+        "totalToolCalls": 0
+      },
+      "details": {
+        "action": "read_source",
+        "arguments": {
+          "path": "src/target-api/scenarios/account-lookup.ts"
+        },
+        "reason": "The failure is isolated to account lookup by external ID, so inspect the endpoint implementation and its error path before forming a causal hypothesis."
+      },
+      "evidence": [],
+      "role": "investigator",
+      "sequence": 3
+    },
+    {
+      "action": "tool-invocation",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 1,
+        "reproductionAttempts": 0,
+        "totalTokens": 1481,
+        "totalToolCalls": 1
+      },
+      "details": {
+        "arguments": {
+          "path": "src/target-api/scenarios/account-lookup.ts"
+        },
+        "tool": "read_source"
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 4,
+      "tool": "read_source"
+    },
+    {
+      "action": "tool-result",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 1,
+        "reproductionAttempts": 0,
+        "totalTokens": 1481,
+        "totalToolCalls": 1
+      },
+      "details": {
+        "durationMs": 5.702,
+        "ok": true,
+        "tool": "read_source",
+        "truncated": false
+      },
+      "evidence": [
+        "evidence-2"
+      ],
+      "role": "orchestrator",
+      "sequence": 6,
+      "tool": "read_source"
+    },
+    {
+      "action": "read_source",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 2,
+        "reproductionAttempts": 0,
+        "totalTokens": 3885,
+        "totalToolCalls": 1
+      },
+      "details": {
+        "action": "read_source",
+        "arguments": {
+          "path": "src/target-api/application-data.ts"
+        },
+        "reason": "The handler compares the requested external ID to account.id; inspect the account data schema and ext-42 record to determine whether it should compare a distinct externalId field."
+      },
+      "evidence": [],
+      "role": "investigator",
+      "sequence": 7
+    },
+    {
+      "action": "tool-invocation",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 2,
+        "reproductionAttempts": 0,
+        "totalTokens": 3885,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "arguments": {
+          "path": "src/target-api/application-data.ts"
+        },
+        "tool": "read_source"
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 8,
+      "tool": "read_source"
+    },
+    {
+      "action": "tool-result",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 2,
+        "reproductionAttempts": 0,
+        "totalTokens": 3885,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "durationMs": 5.965,
+        "ok": true,
+        "tool": "read_source",
+        "truncated": false
+      },
+      "evidence": [
+        "evidence-3"
+      ],
+      "role": "orchestrator",
+      "sequence": 10,
+      "tool": "read_source"
+    },
+    {
+      "action": "propose_hypotheses",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 3,
+        "reproductionAttempts": 0,
+        "totalTokens": 7255,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "action": "propose_hypotheses",
+        "arguments": {
+          "hypotheses": [
+            {
+              "confidence": 0.99,
+              "contradictingEvidenceIds": [],
+              "faultCategory": "data-access",
+              "id": "hypothesis-1",
+              "mechanism": "The predicate compares account.id to externalId. The ext-42 record has id \"account-7\" and externalId \"ext-42\", so the predicate returns no match and getAccount follows its HTTP 500 no-result branch.",
+              "statement": "The account lookup searches the internal account ID instead of the external ID supplied by the route, causing the existing ext-42 account to be treated as missing.",
+              "supportingEvidenceIds": [
+                "evidence-1",
+                "evidence-2",
+                "evidence-3"
+              ],
+              "suspectedFile": "src/target-api/scenarios/account-lookup.ts",
+              "suspectedSymbol": "findAccountByExternalId",
+              "verificationPlan": "Exercise findAccountByExternalId(\"ext-42\", state) with createApplicationData() and confirm it currently returns undefined despite a record whose externalId is \"ext-42\". Then change the predicate to account.externalId === externalId and verify GET /api/accounts/ext-42 returns HTTP 200 with the account-7 record."
+            }
+          ]
+        },
+        "reason": "The handler and application data directly expose a field mismatch that explains both the false no-result condition and the reported 500 response."
+      },
+      "evidence": [
+        "evidence-1",
+        "evidence-2",
+        "evidence-3"
+      ],
+      "role": "investigator",
+      "sequence": 11
+    },
+    {
+      "action": "hypothesis-change",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 3,
+        "reproductionAttempts": 0,
+        "totalTokens": 7255,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "activeHypothesisIds": [
+          "hypothesis-1"
+        ]
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 13
+    },
+    {
+      "action": "request_reproduction",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 4,
+        "reproductionAttempts": 0,
+        "totalTokens": 11147,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "action": "request_reproduction",
+        "arguments": {
+          "hypothesisId": "hypothesis-1"
+        },
+        "reason": "The active hypothesis is directly supported by the handler predicate and fixture data; reproduce the lookup before and after changing the predicate to compare account.externalId to confirm the causal mechanism."
+      },
+      "evidence": [],
+      "role": "investigator",
+      "sequence": 14
+    },
+    {
+      "action": "role-decision",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 5,
+        "reproductionAttempts": 0,
+        "totalTokens": 15299,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "expected": {
+          "supporting": {
+            "logContains": [
+              "ACCOUNT_LOOKUP_RETURNED_NO_RESULT",
+              "\"externalId\":\"ext-42\""
+            ]
+          }
+        },
+        "hypothesisId": "hypothesis-1",
+        "reason": "This is the smallest direct experiment: request the known existing external ID. The no-result log with ext-42 supports the proposed field mismatch by showing that the lookup treated that external ID as absent; the orchestrator will independently assess the immutable reported status and response signature.",
+        "request": {
+          "body": null,
+          "method": "GET",
+          "path": "/api/accounts/ext-42"
+        }
+      },
+      "evidence": [],
+      "role": "reproducer",
+      "sequence": 15
+    },
+    {
+      "action": "tool-invocation",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 5,
+        "reproductionAttempts": 1,
+        "totalTokens": 15299,
+        "totalToolCalls": 3
+      },
+      "details": {
+        "arguments": {
+          "expectations": {
+            "required": {
+              "bodyContains": "account resolution failed",
+              "method": "GET",
+              "path": "/api/accounts/ext-42",
+              "status": 500
+            },
+            "supporting": {
+              "logContains": [
+                "ACCOUNT_LOOKUP_RETURNED_NO_RESULT",
+                "\"externalId\":\"ext-42\""
+              ]
+            }
+          },
+          "request": {
+            "method": "GET",
+            "path": "/api/accounts/ext-42"
+          }
+        },
+        "tool": "execute_reproduction"
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 16,
+      "tool": "execute_reproduction"
+    },
+    {
+      "action": "tool-result",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 5,
+        "reproductionAttempts": 1,
+        "totalTokens": 15299,
+        "totalToolCalls": 3
+      },
+      "details": {
+        "durationMs": 21.279,
+        "ok": true,
+        "tool": "execute_reproduction",
+        "truncated": false
+      },
+      "evidence": [
+        "evidence-4",
+        "evidence-5"
+      ],
+      "role": "orchestrator",
+      "sequence": 19,
+      "tool": "execute_reproduction"
+    },
+    {
+      "action": "reproduction-result",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 5,
+        "reproductionAttempts": 1,
+        "totalTokens": 15299,
+        "totalToolCalls": 3
+      },
+      "details": {
+        "hypothesisId": "hypothesis-1",
+        "outcome": "reproduced"
+      },
+      "evidence": [
+        "evidence-4",
+        "evidence-5"
+      ],
+      "role": "orchestrator",
+      "sequence": 22
+    },
+    {
+      "action": "role-decision",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 6,
+        "reproductionAttempts": 1,
+        "totalTokens": 22623,
+        "totalToolCalls": 3
+      },
+      "details": {
+        "evidenceIds": [
+          "evidence-2",
+          "evidence-3",
+          "evidence-4",
+          "evidence-5",
+          "evidence-1"
+        ],
+        "explanation": "The evidence directly establishes the causal chain. `findAccountByExternalId` compares the route-supplied `externalId` against `account.id`. The application data contains the requested account as `{ id: \"account-7\", externalId: \"ext-42\" }`, so searching for `\"ext-42\"` by `id` necessarily returns no match. The handler then deterministically enters its no-result branch and returns HTTP 500 with `account resolution failed`. The matching-runtime reproduction confirms the same request, response, and `ACCOUNT_LOOKUP_RETURNED_NO_RESULT` path. The audit-sink failure is secondary: it occurs only after the lookup has failed, is caught, and does not determine the response branch.",
+        "hypothesisId": "hypothesis-1",
+        "limitations": [
+          "No patched counterfactual run is provided to demonstrate that changing the predicate to `account.externalId === externalId` produces HTTP 200; however, the supplied source, fixture data, and matching reproduction directly establish the reported causal path."
+        ],
+        "missingEvidenceRequest": null,
+        "outcome": "verified",
+        "unsupportedClaims": []
+      },
+      "evidence": [
+        "evidence-2",
+        "evidence-3",
+        "evidence-4",
+        "evidence-5",
+        "evidence-1"
+      ],
+      "role": "verifier",
+      "sequence": 23
+    },
+    {
+      "action": "verifier-feedback",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 6,
+        "reproductionAttempts": 1,
+        "totalTokens": 22623,
+        "totalToolCalls": 3
+      },
+      "details": {
+        "evidenceIds": [
+          "evidence-2",
+          "evidence-3",
+          "evidence-4",
+          "evidence-5",
+          "evidence-1"
+        ],
+        "explanation": "The evidence directly establishes the causal chain. `findAccountByExternalId` compares the route-supplied `externalId` against `account.id`. The application data contains the requested account as `{ id: \"account-7\", externalId: \"ext-42\" }`, so searching for `\"ext-42\"` by `id` necessarily returns no match. The handler then deterministically enters its no-result branch and returns HTTP 500 with `account resolution failed`. The matching-runtime reproduction confirms the same request, response, and `ACCOUNT_LOOKUP_RETURNED_NO_RESULT` path. The audit-sink failure is secondary: it occurs only after the lookup has failed, is caught, and does not determine the response branch.",
+        "hypothesisId": "hypothesis-1",
+        "limitations": [
+          "No patched counterfactual run is provided to demonstrate that changing the predicate to `account.externalId === externalId` produces HTTP 200; however, the supplied source, fixture data, and matching reproduction directly establish the reported causal path."
+        ],
+        "missingEvidenceRequest": null,
+        "outcome": "verified",
+        "unsupportedClaims": []
+      },
+      "evidence": [
+        "evidence-2",
+        "evidence-3",
+        "evidence-4",
+        "evidence-5",
+        "evidence-1"
+      ],
+      "role": "verifier",
+      "sequence": 24
+    },
+    {
+      "action": "hypothesis-change",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 6,
+        "reproductionAttempts": 1,
+        "totalTokens": 22623,
+        "totalToolCalls": 3
+      },
+      "details": {
+        "hypothesisId": "hypothesis-1",
+        "status": "supported"
+      },
+      "evidence": [
+        "evidence-2",
+        "evidence-3",
+        "evidence-4",
+        "evidence-5",
+        "evidence-1"
+      ],
+      "role": "orchestrator",
+      "sequence": 26
+    },
+    {
+      "action": "termination",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 6,
+        "reproductionAttempts": 1,
+        "totalTokens": 22623,
+        "totalToolCalls": 3
+      },
+      "details": {
+        "finalStatus": "verified",
+        "reason": "verified"
+      },
+      "evidence": [
+        "evidence-2",
+        "evidence-3",
+        "evidence-4",
+        "evidence-5",
+        "evidence-1"
+      ],
+      "role": "orchestrator",
+      "sequence": 27
+    }
+  ]
+}

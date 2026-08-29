@@ -21,9 +21,11 @@
     "baseline": "tsx src/cli.ts baseline",
     "baseline:all": "tsx src/cli.ts baseline:all",
     "investigate": "tsx src/cli.ts investigate",
+    "demo": "tsx src/demo.ts",
     "evaluate": "tsx src/evaluation/cli.ts",
     "evaluate:all": "tsx src/evaluation/cli.ts --all",
-    "review:regenerate": "tsx src/evaluation/regenerate-human-review.ts"
+    "review:regenerate": "tsx src/evaluation/regenerate-human-review.ts",
+    "submission:generate": "tsx src/submission/generate.ts"
   },
   "dependencies": {
     "express": "^5.1.0",

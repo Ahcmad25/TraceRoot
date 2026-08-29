@@ -1,171 +1,178 @@
 # TraceRoot
 
-TraceRoot is an agentic API failure investigator for backend developers. Given a failure report, permitted source code, and initial logs, it forms hypotheses, executes bounded reproductions against a controlled API, verifies causal claims, and emits an auditable diagnosis.
+TraceRoot is a bounded agentic API failure investigator that turns a failure report into source evidence, a controlled reproduction, and an independently verified diagnosis.
 
-Phase 4 is frozen at `traceroot-phase4-frozen`. Phase 5 adds an eight-case benchmark and evaluation infrastructure, but no official credentialed results have been generated yet.
+> **Official evaluation:** 23/24 agentic runs reached evidence-backed verification · 0 unsupported positive claims · 48/48 evaluation slots completed · 0 fairness issues
 
-## Problem
+The one-shot baseline has no runtime verification capability by design. The 95.8% verification result is therefore **not** a direct accuracy uplift over baseline, and TraceRoot did not consistently improve strict static localization accuracy in this benchmark.
 
-Backend failures rarely identify their own cause. A loud log may be secondary, a valid configuration value may lose to precedence, and a runtime value may differ from its TypeScript assertion. TraceRoot evaluates whether controlled investigation and reproduction improve root-cause identification over a fair one-shot comparison.
+## Demo and result highlights
 
-## Why one-shot diagnosis fails
+Run the representative case-004 investigation:
 
-The baseline must interpret every permitted source file and initial log in one prompt. It cannot inspect selectively, ask a follow-up question, reproduce the request, or distinguish a plausible explanation from a runtime-confirmed cause. This makes it vulnerable to incomplete logs, misleading secondary errors, and cross-file assumptions.
+```sh
+npm run demo
+```
 
-## Baseline architecture
+The concise output calls out case loading, evidence inspection, hypothesis formation, controlled reproduction, Verifier outcome, final status, and LLM/tool/token counts. It uses the frozen workflow and makes real OpenAI API calls, so configure credentials first.
 
-`baseline-v2` receives the immutable `ArtifactBundle`, serialized deterministically with stable ordering and hashes. It makes exactly one reasoning call, with at most one schema-only repair call. It has no tools, reproduction, verification, retries for reasoning, or access to hidden ground truth.
+Measured across eight cases × two modes × three repetitions:
 
-## Agentic architecture
+| Metric | One-shot baseline | TraceRoot agentic |
+|---|---:|---:|
+| All root-cause fields | 87.5% | 83.3% |
+| Evidence-verified | N/A | 95.8% (23/24) |
+| Unsupported positive claims | 0.0% | 0.0% |
+| Mean LLM calls / tools | 1.00 / 0.00 | 6.17 / 3.08 |
+| Mean tokens / runtime | 4,106 / 4.9 s | 22,525 / 30.6 s |
 
-The frozen workflow uses `investigator-v1`, `reproducer-v2`, and `verifier-v2` in a bounded deterministic state machine. The Investigator gathers evidence and maintains hypotheses. The Reproducer describes a controlled request. Runtime code executes it. The Verifier checks whether source and correlated runtime evidence establish causation rather than correlation.
+TraceRoot’s measured advantage is runtime-grounded diagnosis, not a demonstrated increase in overall static accuracy. See the [full evaluation report](docs/evaluation-report.md).
 
-## Tool boundary
+## Why this problem matters
 
-Only four tools exist:
+Backend failures rarely identify their own cause. A loud log can be secondary, a configuration value can lose through precedence, and a TypeScript assertion can disagree with runtime input. A one-shot LLM can propose a plausible explanation, but it cannot establish that the reported request follows that causal path. TraceRoot makes the investigation auditable and can abstain when evidence remains insufficient.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    A[Failure report] --> B[Artifact loader]
+    B --> C[Investigator]
+    C --> D[4 bounded tools]
+    D --> E[Reproducer]
+    E --> F[Controlled API]
+    F --> G[Runtime evidence]
+    G --> H[Verifier]
+    H --> I[Deterministic gate]
+    I --> J[Diagnosis]
+```
+
+The orchestrator—not the model—controls budgets, allowed actions, tool execution, state transitions, and verification prerequisites. Only these tools exist:
 
 - `search_source`
 - `read_source`
 - `search_logs`
 - `execute_reproduction`
 
-Source and log tools operate only on artifacts loaded through explicit allowlists. `execute_reproduction` is the only tool permitted to call target reset and correlated-log control endpoints. There is no shell tool, database, vector store, frontend, or unrestricted filesystem access.
+There is no shell tool, unrestricted filesystem/network access, database, vector store, or frontend. The [architecture guide](docs/architecture.md) shows the model/ground-truth isolation boundary.
 
-## Evidence model
+## Quick start
 
-Investigations use an append-only journal. Evidence and hypothesis revisions are retained, while `activeHypotheses` exposes only each hypothesis’s latest non-rejected revision. Every tool observation records origin, locator, collection time, duration, and the tool contract version.
-
-## Reproduction model
-
-The orchestrator derives the required failure signature from the immutable public report: method, path, status, and response marker. Model-predicted log markers are supporting observations and cannot redefine whether the reported failure reproduced. Each attempt resets a fresh controlled target, assigns a correlation ID, captures response and correlated logs, and records required and supporting assertions separately.
-
-## Verification gate
-
-A diagnosis can be `verified` only when all of the following hold:
-
-- supporting source evidence exists;
-- the required runtime failure signature reproduced;
-- runtime HTTP evidence exists;
-- reproduction evidence is cited;
-- every cited evidence reference is valid;
-- the Verifier returned `verified`;
-- there are zero unsupported positive factual claims.
-
-Limitations and explicit non-claims remain visible but do not weaken or invalidate the gate.
-
-## Benchmark design
-
-The current deterministic corpus contains `case-001` through `case-008`. Every case exposes exactly the same five-file source corpus, so source allowlists cannot reveal the responsible file. Cases cover nested validation, configuration naming, numeric-string coercion, incorrect lookup fields with a secondary error, cross-file signing-key selection, configuration precedence, string-to-boolean coercion with a louder secondary error, and optimistic-version collision.
-
-Each case has a public manifest and initial logs, deterministic target behavior, an internal neutral runtime mapping, hidden ground truth, and tests. Public identifiers remain neutral.
-
-## Leakage prevention
-
-`ArtifactLoader` can read only public manifests, manifest-permitted source files, and case-local initial logs. It explicitly denies `cases/ground-truth`, `cases/internal`, and `results`. Automated tests scan all eight artifact bundles and canonical baseline contexts for internal scenario IDs, hidden fields, benchmark paths, and answer labels. Runtime mappings and ground truth are never imported by baseline or agentic runners.
-
-Evaluation execution and scoring are separate modules. All requested baseline and agentic attempts finish and their result artifacts are parsed before hidden ground truth is loaded for scoring.
-
-## Evaluation methodology
-
-Official evaluation uses eight cases, two frozen implementations, and three repetitions: 48 run slots. Both modes use the same case artifacts, model ID, and effective sampling configuration. GPT-5.6-family models omit temperature and record it as `null`.
-
-Deterministic scoring reports category, normalized source file, normalized symbol, verification status, unsupported claims, calls, tools, tokens, duration, and termination reason. No fuzzy matching is used. A root-cause field match requires category, file, and symbol all to match. Causal-mechanism quality is emitted in a blinded human-review artifact and is never self-awarded by keyword overlap.
-
-Summaries contain baseline means, agentic means, absolute differences, per-case/per-repetition rows, fairness violations, and every failed attempt. The evaluator is neutral: it can report either approach winning or no meaningful difference.
-
-## Requirements and setup
-
-- Node.js 22 or newer
-- npm
-- Docker, optionally
+Requirements: Node.js 22 or newer and npm.
 
 ```sh
 npm ci
-cp .env.example .env
 npm run typecheck
 npm test
 npm run build
 ```
 
-On Windows PowerShell, use `Copy-Item .env.example .env`.
-
-## Developer commands
+For a real investigation on macOS/Linux:
 
 ```sh
-npm run target
-npm run case -- case-001
-npm run tool:search-source -- case-001 profile
-npm run tool:read-source -- case-001 src/target-api/scenarios/user-registration.ts
-npm run tool:search-logs -- case-001 ERROR
-npm run tool:reproduce -- case-001
-npm run baseline -- case-001
+export OPENAI_API_KEY="..."
+export OPENAI_MODEL="gpt-5.6-sol"
 npm run investigate -- case-001
 ```
 
-Baseline and agentic commands require `OPENAI_API_KEY` and `OPENAI_MODEL`. Credentials are read only from environment variables and are redacted from saved artifacts.
+Windows PowerShell:
 
-## How to reproduce evaluation results
+```powershell
+$env:OPENAI_API_KEY = "..."
+$env:OPENAI_MODEL = "gpt-5.6-sol"
+npm run investigate -- case-001
+```
 
-Evaluation commands are dry runs unless `--execute` is explicitly supplied:
+Credentials are read only from environment variables and are redacted from saved artifacts. Never commit `.env`.
+
+## Example investigation
+
+Case-004 reports that looking up an existing account by external ID returns HTTP 500. TraceRoot:
+
+1. reads the account handler and shared application data;
+2. forms a hypothesis that the predicate compares `externalId` against the internal `id` field;
+3. reproduces the required GET/path/status/body signature on a reset target;
+4. captures correlated runtime logs;
+5. verifies that a louder audit failure is secondary and does not select the response branch;
+6. returns `verified` with limitations and zero unsupported positive claims.
+
+The sanitized completed trajectory is [case-004-r1.json](submission/trajectories/case-004-r1.json).
+
+## Benchmark results
+
+The frozen evaluation used eight deterministic cases, the same artifact bundle and model for both modes, and three repetitions. Every source allowlist contains the same five files. Execution completed before hidden ground truth was loaded for exact scoring.
+
+Baseline category/source/symbol/all-field accuracy was 87.5% / 100% / 100% / 87.5%. Agentic accuracy was 91.7% / 91.7% / 91.7% / 83.3%. One agentic run stopped `evidence_insufficient_after_max_rounds` instead of forcing verification. Category and location ontology limitations are documented for case-005 and case-002 rather than retroactively changing the benchmark.
+
+- [Human-readable report](docs/evaluation-report.md)
+- [Submission-safe evaluation JSON](docs/evaluation-summary.json)
+- [Sanitized representative trajectories](submission/trajectories/README.md)
+
+## Reproducibility
+
+Evaluation is a dry run unless `--execute` is explicitly supplied:
 
 ```sh
-npm run evaluate -- --case case-001 --mode both --repetitions 3
 npm run evaluate:all -- --repetitions 3
 ```
 
-After the runner and evaluator are reviewed and frozen, the official credentialed execution is:
+The dry run makes zero provider calls. This command does make real API calls and incurs cost:
 
 ```sh
 npm run evaluate:all -- --repetitions 3 --execute
 ```
 
-Each case/mode/repetition is a resumable slot. Failed retries are written as separate attempt records; completed slots are not rerun. Outputs are stored under:
+Do not rerun the frozen official results unless intentionally conducting a new experiment. Follow the [clean-clone validation procedure](docs/reproducibility.md) for install, typecheck, tests, build, fake-provider investigation, and zero-credit evaluation planning.
+
+## Security and isolation
+
+`ArtifactLoader` exposes only the public failure report, permitted source files, and initial public logs. The reusable path sandbox denies traversal, absolute-path escape, symlink escape, hidden ground truth, internal runtime mappings, results, unrelated paths, and oversized reads. Stable hashes bind every run to its exact public inputs.
+
+`execute_reproduction` is the only component permitted to call target reset/control/log endpoints. It resets deterministic state, creates a request correlation ID, executes one validated HTTP request, gathers correlated logs, and compares required versus supporting assertions. Hidden ground truth is evaluator-only.
+
+## Limitations
+
+- Eight controlled cases are smaller and simpler than production incident distributions.
+- Only one model family was evaluated.
+- Exact categories and source ownership can overlap across adjacent components.
+- Agentic runs used roughly 5.5× more tokens and 6.2× more time.
+- Verification establishes the benchmark failure path; it does not test a patch or prove production-wide generality.
+- Model output can vary even with the same effective sampling configuration.
+
+## Project structure
 
 ```text
-results/baseline/
-results/agentic/
-results/evaluation/runs/
-results/evaluation/summary.json
-results/evaluation/summary.md
-results/evaluation/human-review/items.json
+cases/public/              model-visible reports and initial logs
+cases/internal/            runtime mappings (model-inaccessible)
+cases/ground-truth/        evaluator-only answers
+src/artifacts/             immutable loader and hashing
+src/security/              filesystem sandbox
+src/tools/                 four bounded tool contracts
+src/baseline/              frozen one-shot comparison
+src/agentic/               roles, state machine, gate, trajectories
+src/target-api/            deterministic controlled Express API
+src/evaluation/            isolated scheduling and exact scoring
+src/submission/            submission-safe packaging only
+tests/                     deterministic and regression coverage
+docs/                      architecture, evaluation, reproducibility
+submission/                sanitized trajectories and contest copy
 ```
 
-## Docker reproducibility
+## Hackathon methodology
 
-The image contains no credentials. Build and run checks with:
+Development proceeded in frozen phases: deterministic benchmark infrastructure, bounded tools/provider abstraction, a one-shot baseline, leakage hardening, agentic workflow, and isolated evaluation. Real credentialed smoke tests exposed provider response-shape, model-capability, strict JSON Schema, schema-alignment, budget-context, reproduction-semantics, and unsupported-claim defects. Each was fixed at the responsible layer and regression-tested before the official evaluation.
 
-```sh
-docker build -t traceroot .
-docker run --rm traceroot
-docker run --rm traceroot npm run typecheck
-docker run --rm traceroot npm run build
-```
-
-For an explicitly authorized credentialed command, pass environment variables at runtime rather than baking them into the image:
-
-```sh
-docker run --rm --env-file .env traceroot npm run evaluate:all -- --repetitions 3 --execute
-```
-
-## Current frozen versions
+Frozen versions:
 
 ```text
-git tag: traceroot-phase4-frozen
 baseline-v2
 investigator-v1
 reproducer-v2
 verifier-v2
 agentic-trajectory-v3
 tool contract 1.1.0
+agentic-result-v1
+human-review-set-v2
 ```
 
-Phase 5 adds `evaluation-attempt-v1` and `evaluation-summary-v1`. Frozen Phase 4 contracts are unchanged.
-
-## Limitations
-
-- Official numerical results do not exist until the credentialed 48-slot evaluation is run.
-- Model output may vary even when effective sampling settings are fixed.
-- Causal-mechanism correctness requires blinded human review.
-- The controlled API is a compact deterministic benchmark, not a production service emulator.
-- Token usage is reported; dollar cost is not estimated because pricing changes over time.
-- Eight cases improve diversity but remain smaller than the planned 10–12-case final corpus.
+The [improvement changelog](IMPROVEMENT_CHANGELOG.md) records the evidence behind those changes. The [submission checklist](submission/agent-trajectory-checklist.md) distinguishes TraceRoot runtime trajectories from the actual Codex development-session exports required separately by the hackathon.

@@ -1,0 +1,754 @@
+{
+  "caseId": "case-005",
+  "evidence": [
+    {
+      "excerpt": "{\"summary\":\"A session signed with the currently issued key is rejected by the validation endpoint.\",\"endpoint\":\"/api/sessions/validate/key-current\",\"method\":\"GET\",\"observedStatus\":401,\"observedError\":\"session validation failed\",\"requestContext\":{\"keyId\":\"key-current\"}}",
+      "kind": "report",
+      "label": "evidence-1"
+    },
+    {
+      "excerpt": "{\"query\":\"key-current session validation failed 401\",\"matches\":[],\"totalMatches\":0}",
+      "kind": "log",
+      "label": "evidence-2"
+    },
+    {
+      "excerpt": "{\"query\":\"sessions validate key-current\",\"matches\":[],\"totalMatches\":0}",
+      "kind": "source",
+      "label": "evidence-3"
+    },
+    {
+      "excerpt": "{\"query\":\"key-current\",\"matches\":[{\"path\":\"src/target-api/application-data.ts\",\"line\":25,\"column\":14,\"preview\":\"      { id: \\\"key-current\\\", material: \\\"current-signing-material\\\", active: true },\"}],\"totalMatches\":1}",
+      "kind": "source",
+      "label": "evidence-4"
+    },
+    {
+      "excerpt": "export interface ApplicationData {\n  configuration: Record<string, string>;\n  accounts: Array<{ id: string; externalId: string; displayName: string }>;\n  signingKeys: Array<{ id: string; material: string; active: boolean }>;\n  auditSinkAvailable: boolean;\n  profileVersion: number;\n}\n\nexport function selectSigningKey(_keyId: string, data: Readonly<ApplicationData>) {\n  return data.signingKeys[0];\n}\n\nexport function createApplicationData(): ApplicationData {\n  return {\n    configuration: {\n      PAYMENTS_API_KEY: \"sandbox-payment-key\",\n      PAYMENT_RETRY_ENDPOINT: \"https://sandbox.example.test/payment-retry\",\n      LEGACY_PAYMENT_RETRY_ENDPOINT: \"\",\n    },\n    accounts: [\n      { id: \"account-7\", externalId: \"ext-42\", displayName: \"Example Account\" },\n    ],\n    signingKeys: [\n      { id: \"key-retired\", material: \"retired-signing-material\", active: false },\n      { id: \"key-current\", material: \"current-signing-material\", active: true },\n    ],\n    auditSinkAvailable: false,\n    profileVersion: 7,\n  };\n}\n",
+      "kind": "source",
+      "label": "evidence-5"
+    },
+    {
+      "excerpt": "{\"status\":401,\"body\":{\"error\":\"session validation failed\",\"requestId\":\"[correlation-id]\"},\"assertions\":[{\"kind\":\"method\",\"requirement\":\"required\",\"expected\":\"GET\",\"actual\":\"GET\",\"passed\":true},{\"kind\":\"path\",\"requirement\":\"required\",\"expected\":\"/api/sessions/validate/key-current\",\"actual\":\"/api/sessions/validate/key-current\",\"passed\":true},{\"kind\":\"status\",\"requirement\":\"required\",\"expected\":401,\"actual\":401,\"passed\":true},{\"kind\":\"body\",\"requirement\":\"required\",\"expected\":\"session validation failed\",\"actual\":\"{\\\"error\\\":\\\"session validation failed\\\",\\\"requestId\\\":\\\"[correlation-id]\\\"}\",\"passed\":true},{\"kind\":\"log\",\"requirement\":\"supporting\",\"expected\":\"requested keyId=key-current\",\"actual\":\"[{\\\"sequence\\\":1,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"info\\\",\\\"message\\\":\\\"REQUEST_RECEIVED\\\",\\\"details\\\":{\\\"method\\\":\\\"GET\\\",\\\"path\\\":\\\"/api/sessions/validate/key-current\\\"}},{\\\"sequence\\\":2,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"warn\\\",\\\"message\\\":\\\"SESSION_SIGNATURE_REJECTED\\\",\\\"details\\\":{\\\"requestedKeyId\\\":\\\"key-current\\\",\\\"selectedKeyId\\\":\\\"key-retired\\\"}}]\",\"passed\":false},{\"kind\":\"log\",\"requirement\":\"supporting\",\"expected\":\"selected keyId=key-retired\",\"actual\":\"[{\\\"sequence\\\":1,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"info\\\",\\\"message\\\":\\\"REQUEST_RECEIVED\\\",\\\"details\\\":{\\\"method\\\":\\\"GET\\\",\\\"path\\\":\\\"/api/sessions/validate/key-current\\\"}},{\\\"sequence\\\":2,\\\"requestId\\\":\\\"[correlation-id]\\\",\\\"level\\\":\\\"warn\\\",\\\"message\\\":\\\"SESSION_SIGNATURE_REJECTED\\\",\\\"details\\\":{\\\"requestedKeyId\\\":\\\"key-current\\\",\\\"selectedKeyId\\\":\\\"key-retired\\\"}}]\",\"passed\":false}],\"outc",
+      "kind": "http",
+      "label": "evidence-6"
+    },
+    {
+      "excerpt": "[{\"sequence\":1,\"requestId\":\"[correlation-id]\",\"level\":\"info\",\"message\":\"REQUEST_RECEIVED\",\"details\":{\"method\":\"GET\",\"path\":\"/api/sessions/validate/key-current\"}},{\"sequence\":2,\"requestId\":\"[correlation-id]\",\"level\":\"warn\",\"message\":\"SESSION_SIGNATURE_REJECTED\",\"details\":{\"requestedKeyId\":\"key-current\",\"selectedKeyId\":\"key-retired\"}}]",
+      "kind": "log",
+      "label": "evidence-7"
+    }
+  ],
+  "experiments": [
+    {
+      "actualObservation": "{\"status\":401,\"body\":{\"error\":\"session validation failed\",\"requestId\":\"[correlation-id]\"},\"bodyText\":\"{\\\"error\\\":\\\"session validation failed\\\",\\\"requestId\\\":\\\"[correlation-id]\\\"}\"}",
+      "evidenceIds": [
+        "evidence-6",
+        "evidence-7"
+      ],
+      "expectedObservation": "{\"required\":{\"method\":\"GET\",\"path\":\"/api/sessions/validate/key-current\",\"status\":401,\"bodyContains\":\"session validation failed\"},\"supporting\":{\"logContains\":[\"requested keyId=key-current\",\"selected keyId=key-retired\"]}}",
+      "hypothesisId": "hypothesis-1",
+      "id": "experiment-1",
+      "outcome": "reproduced",
+      "request": {
+        "method": "GET",
+        "path": "/api/sessions/validate/key-current"
+      }
+    }
+  ],
+  "failureReport": {
+    "endpoint": "/api/sessions/validate/key-current",
+    "method": "GET",
+    "observedError": "session validation failed",
+    "observedStatus": 401,
+    "requestContext": {
+      "keyId": "key-current"
+    },
+    "summary": "A session signed with the currently issued key is rejected by the validation endpoint."
+  },
+  "hypothesisRevisions": [
+    {
+      "confidence": 0.98,
+      "contradictingEvidenceIds": [],
+      "faultCategory": "authentication",
+      "id": "hypothesis-1",
+      "mechanism": "`selectSigningKey(_keyId, data)` unconditionally returns `data.signingKeys[0]`. The first configured key is `key-retired`, while the request identifies `key-current`, which is the second entry and has different signing material. Validation therefore uses retired material for a session signed with the current material, plausibly producing the reported 401.",
+      "statement": "Session validation selects the retired signing key instead of the requested current key because `selectSigningKey` ignores its `keyId` argument.",
+      "status": "proposed",
+      "supportingEvidenceIds": [
+        "evidence-1",
+        "evidence-4",
+        "evidence-5"
+      ],
+      "suspectedSourceFile": "src/target-api/application-data.ts",
+      "suspectedSymbol": "selectSigningKey",
+      "verificationPlan": "Call `selectSigningKey(\"key-current\", createApplicationData())` and confirm it returns `key-retired`. Then change selection to find the key whose `id` equals the requested ID (and, if required by policy, ensure it is active), rerun GET `/api/sessions/validate/key-current`, and verify that the current-key session is accepted rather than returning 401."
+    },
+    {
+      "confidence": 0.98,
+      "contradictingEvidenceIds": [],
+      "faultCategory": "authentication",
+      "id": "hypothesis-1",
+      "mechanism": "`selectSigningKey(_keyId, data)` unconditionally returns `data.signingKeys[0]`. The first configured key is `key-retired`, while the request identifies `key-current`, which is the second entry and has different signing material. Validation therefore uses retired material for a session signed with the current material, plausibly producing the reported 401.",
+      "statement": "Session validation selects the retired signing key instead of the requested current key because `selectSigningKey` ignores its `keyId` argument.",
+      "status": "tested",
+      "supportingEvidenceIds": [
+        "evidence-1",
+        "evidence-4",
+        "evidence-5"
+      ],
+      "suspectedSourceFile": "src/target-api/application-data.ts",
+      "suspectedSymbol": "selectSigningKey",
+      "verificationPlan": "Call `selectSigningKey(\"key-current\", createApplicationData())` and confirm it returns `key-retired`. Then change selection to find the key whose `id` equals the requested ID (and, if required by policy, ensure it is active), rerun GET `/api/sessions/validate/key-current`, and verify that the current-key session is accepted rather than returning 401."
+    },
+    {
+      "confidence": 0.98,
+      "contradictingEvidenceIds": [],
+      "faultCategory": "authentication",
+      "id": "hypothesis-1",
+      "mechanism": "`selectSigningKey(_keyId, data)` unconditionally returns `data.signingKeys[0]`. The first configured key is `key-retired`, while the request identifies `key-current`, which is the second entry and has different signing material. Validation therefore uses retired material for a session signed with the current material, plausibly producing the reported 401.",
+      "statement": "Session validation selects the retired signing key instead of the requested current key because `selectSigningKey` ignores its `keyId` argument.",
+      "status": "supported",
+      "supportingEvidenceIds": [
+        "evidence-1",
+        "evidence-4",
+        "evidence-5"
+      ],
+      "suspectedSourceFile": "src/target-api/application-data.ts",
+      "suspectedSymbol": "selectSigningKey",
+      "verificationPlan": "Call `selectSigningKey(\"key-current\", createApplicationData())` and confirm it returns `key-retired`. Then change selection to find the key whose `id` equals the requested ID (and, if required by policy, ensure it is active), rerun GET `/api/sessions/validate/key-current`, and verify that the current-key session is accepted rather than returning 401."
+    }
+  ],
+  "label": "cross-file investigation",
+  "metrics": {
+    "durationMs": 71503.327,
+    "investigationRounds": 1,
+    "llmCalls": 8,
+    "reproductionAttempts": 1,
+    "toolCalls": 5,
+    "totalTokens": 26805
+  },
+  "outcome": {
+    "diagnosis": {
+      "category": "authentication",
+      "causalMechanism": "`selectSigningKey(_keyId, data)` unconditionally returns `data.signingKeys[0]`. The first configured key is `key-retired`, while the request identifies `key-current`, which is the second entry and has different signing material. Validation therefore uses retired material for a session signed with the current material, plausibly producing the reported 401.",
+      "confidence": 0.98,
+      "evidenceIds": [
+        "evidence-1",
+        "evidence-5",
+        "evidence-6",
+        "evidence-7"
+      ],
+      "explanation": "The evidence establishes the proposed selector defect in the matching runtime path. Source shows that `selectSigningKey` ignores `_keyId` and always returns `data.signingKeys[0]`; the first entry is the inactive `key-retired`, while `key-current` is the requested active key and has different material. The matching GET reproduction returns the reported 401 and its correlated structured log records `requestedKeyId: key-current`, `selectedKeyId: key-retired`, followed by `SESSION_SIGNATURE_REJECTED`. This connects the deterministic source defect to the upstream key mismatch at the reproduced failure, rather than merely correlating an unrelated condition. The two supporting text assertions failed only because their expected prose did not match the structured JSON formatting; the requested and selected IDs are nevertheless explicitly present in the captured log.",
+      "limitations": [
+        "No post-fix or controlled intervention was run to demonstrate that ID-based key selection changes this request from 401 to acceptance.",
+        "The supplied source excerpt does not show the validation endpoint’s call site or signature-comparison implementation, although the correlated runtime log directly reports the requested/selected key mismatch during signature rejection."
+      ],
+      "reproductionSummary": "Reproduced with [correlation-id]; observed failure signature matched.",
+      "sourceFile": "src/target-api/application-data.ts",
+      "status": "verified",
+      "symbol": "selectSigningKey"
+    },
+    "terminationReason": "verified",
+    "unsupportedClaimCount": 0
+  },
+  "promptVersions": {
+    "investigator": "investigator-v1",
+    "reproducer": "reproducer-v2",
+    "verifier": "verifier-v2"
+  },
+  "repetition": 2,
+  "schemaVersion": "submission-trajectory-v1",
+  "sourceSchemaVersion": "agentic-trajectory-v3",
+  "steps": [
+    {
+      "action": "investigation_started",
+      "details": {
+        "failureReport": {
+          "endpoint": "/api/sessions/validate/key-current",
+          "method": "GET",
+          "observedError": "session validation failed",
+          "observedStatus": 401,
+          "requestContext": {
+            "keyId": "key-current"
+          },
+          "summary": "A session signed with the currently issued key is rejected by the validation endpoint."
+        }
+      },
+      "role": "orchestrator",
+      "sequence": 1
+    },
+    {
+      "action": "search_logs",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 1,
+        "reproductionAttempts": 0,
+        "totalTokens": 1498,
+        "totalToolCalls": 0
+      },
+      "details": {
+        "action": "search_logs",
+        "arguments": {
+          "query": "key-current session validation failed 401"
+        },
+        "reason": "The failure concerns session-key validation, but none of the listed source filenames clearly identify that implementation. Search the runtime log first for the validation path, key-selection details, and any underlying authentication error before forming a causal hypothesis."
+      },
+      "evidence": [],
+      "role": "investigator",
+      "sequence": 3
+    },
+    {
+      "action": "tool-invocation",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 1,
+        "reproductionAttempts": 0,
+        "totalTokens": 1498,
+        "totalToolCalls": 1
+      },
+      "details": {
+        "arguments": {
+          "query": "key-current session validation failed 401"
+        },
+        "tool": "search_logs"
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 4,
+      "tool": "search_logs"
+    },
+    {
+      "action": "tool-result",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 1,
+        "reproductionAttempts": 0,
+        "totalTokens": 1498,
+        "totalToolCalls": 1
+      },
+      "details": {
+        "durationMs": 0.477,
+        "ok": true,
+        "tool": "search_logs",
+        "truncated": false
+      },
+      "evidence": [
+        "evidence-2"
+      ],
+      "role": "orchestrator",
+      "sequence": 6,
+      "tool": "search_logs"
+    },
+    {
+      "action": "search_source",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 2,
+        "reproductionAttempts": 0,
+        "totalTokens": 3356,
+        "totalToolCalls": 1
+      },
+      "details": {
+        "action": "search_source",
+        "arguments": {
+          "query": "sessions validate key-current"
+        },
+        "reason": "The exact log search returned no matches, and the listed filenames do not expose the session-validation implementation. Search the available source for the endpoint and key identifier to locate the responsible symbol before proposing a causal hypothesis."
+      },
+      "evidence": [],
+      "role": "investigator",
+      "sequence": 7
+    },
+    {
+      "action": "tool-invocation",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 2,
+        "reproductionAttempts": 0,
+        "totalTokens": 3356,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "arguments": {
+          "query": "sessions validate key-current"
+        },
+        "tool": "search_source"
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 8,
+      "tool": "search_source"
+    },
+    {
+      "action": "tool-result",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 2,
+        "reproductionAttempts": 0,
+        "totalTokens": 3356,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "durationMs": 1.346,
+        "ok": true,
+        "tool": "search_source",
+        "truncated": false
+      },
+      "evidence": [
+        "evidence-3"
+      ],
+      "role": "orchestrator",
+      "sequence": 10,
+      "tool": "search_source"
+    },
+    {
+      "action": "search_source",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 3,
+        "reproductionAttempts": 0,
+        "totalTokens": 5605,
+        "totalToolCalls": 2
+      },
+      "details": {
+        "action": "search_source",
+        "arguments": {
+          "query": "key-current"
+        },
+        "reason": "The combined endpoint/key search returned no matches, so isolate the distinctive key identifier. This should locate any fixture, key registry, or validation logic that handles the currently issued signing key and provide a concrete file and symbol for hypothesis formation."
+      },
+      "evidence": [],
+      "role": "investigator",
+      "sequence": 11
+    },
+    {
+      "action": "tool-invocation",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 3,
+        "reproductionAttempts": 0,
+        "totalTokens": 5605,
+        "totalToolCalls": 3
+      },
+      "details": {
+        "arguments": {
+          "query": "key-current"
+        },
+        "tool": "search_source"
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 12,
+      "tool": "search_source"
+    },
+    {
+      "action": "tool-result",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 3,
+        "reproductionAttempts": 0,
+        "totalTokens": 5605,
+        "totalToolCalls": 3
+      },
+      "details": {
+        "durationMs": 1.13,
+        "ok": true,
+        "tool": "search_source",
+        "truncated": false
+      },
+      "evidence": [
+        "evidence-4"
+      ],
+      "role": "orchestrator",
+      "sequence": 14,
+      "tool": "search_source"
+    },
+    {
+      "action": "read_source",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 4,
+        "reproductionAttempts": 0,
+        "totalTokens": 8221,
+        "totalToolCalls": 3
+      },
+      "details": {
+        "action": "read_source",
+        "arguments": {
+          "path": "src/target-api/application-data.ts"
+        },
+        "reason": "The only source match identifies `key-current` as an active key in `application-data.ts`. Read that file to inspect the surrounding key registry, ordering, and session-validation scenario wiring so a concrete mechanism and symbol can be identified without speculating."
+      },
+      "evidence": [],
+      "role": "investigator",
+      "sequence": 15
+    },
+    {
+      "action": "tool-invocation",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 4,
+        "reproductionAttempts": 0,
+        "totalTokens": 8221,
+        "totalToolCalls": 4
+      },
+      "details": {
+        "arguments": {
+          "path": "src/target-api/application-data.ts"
+        },
+        "tool": "read_source"
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 16,
+      "tool": "read_source"
+    },
+    {
+      "action": "tool-result",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 4,
+        "reproductionAttempts": 0,
+        "totalTokens": 8221,
+        "totalToolCalls": 4
+      },
+      "details": {
+        "durationMs": 1.899,
+        "ok": true,
+        "tool": "read_source",
+        "truncated": false
+      },
+      "evidence": [
+        "evidence-5"
+      ],
+      "role": "orchestrator",
+      "sequence": 18,
+      "tool": "read_source"
+    },
+    {
+      "action": "propose_hypotheses",
+      "budget": {
+        "activeHypotheses": 0,
+        "investigationRounds": 1,
+        "llmCalls": 5,
+        "reproductionAttempts": 0,
+        "totalTokens": 11790,
+        "totalToolCalls": 4
+      },
+      "details": {
+        "action": "propose_hypotheses",
+        "arguments": {
+          "hypotheses": [
+            {
+              "confidence": 0.98,
+              "contradictingEvidenceIds": [],
+              "faultCategory": "authentication",
+              "id": "hypothesis-1",
+              "mechanism": "`selectSigningKey(_keyId, data)` unconditionally returns `data.signingKeys[0]`. The first configured key is `key-retired`, while the request identifies `key-current`, which is the second entry and has different signing material. Validation therefore uses retired material for a session signed with the current material, plausibly producing the reported 401.",
+              "statement": "Session validation selects the retired signing key instead of the requested current key because `selectSigningKey` ignores its `keyId` argument.",
+              "supportingEvidenceIds": [
+                "evidence-1",
+                "evidence-4",
+                "evidence-5"
+              ],
+              "suspectedFile": "src/target-api/application-data.ts",
+              "suspectedSymbol": "selectSigningKey",
+              "verificationPlan": "Call `selectSigningKey(\"key-current\", createApplicationData())` and confirm it returns `key-retired`. Then change selection to find the key whose `id` equals the requested ID (and, if required by policy, ensure it is active), rerun GET `/api/sessions/validate/key-current`, and verify that the current-key session is accepted rather than returning 401."
+            }
+          ]
+        },
+        "reason": "The available source directly exposes a key-selection defect aligned with the failure: the requested identifier is ignored and array ordering chooses the retired key."
+      },
+      "evidence": [
+        "evidence-1",
+        "evidence-4",
+        "evidence-5"
+      ],
+      "role": "investigator",
+      "sequence": 19
+    },
+    {
+      "action": "hypothesis-change",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 5,
+        "reproductionAttempts": 0,
+        "totalTokens": 11790,
+        "totalToolCalls": 4
+      },
+      "details": {
+        "activeHypothesisIds": [
+          "hypothesis-1"
+        ]
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 21
+    },
+    {
+      "action": "request_reproduction",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 6,
+        "reproductionAttempts": 0,
+        "totalTokens": 15782,
+        "totalToolCalls": 4
+      },
+      "details": {
+        "action": "request_reproduction",
+        "arguments": {
+          "hypothesisId": "hypothesis-1"
+        },
+        "reason": "The active hypothesis is concrete and strongly supported by source: `selectSigningKey` ignores `keyId` and returns the first, retired key. Reproduction should confirm the selector returns `key-retired` for `key-current` and that ID-based selection resolves the reported 401."
+      },
+      "evidence": [],
+      "role": "investigator",
+      "sequence": 22
+    },
+    {
+      "action": "role-decision",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 7,
+        "reproductionAttempts": 0,
+        "totalTokens": 19971,
+        "totalToolCalls": 4
+      },
+      "details": {
+        "expected": {
+          "supporting": {
+            "logContains": [
+              "requested keyId=key-current",
+              "selected keyId=key-retired"
+            ]
+          }
+        },
+        "hypothesisId": "hypothesis-1",
+        "reason": "This is the smallest request matching the immutable failure report. Logs showing that key-current was requested but key-retired was selected would directly support the proposed selector mechanism; absence of that mismatch would weaken or reject it.",
+        "request": {
+          "body": null,
+          "method": "GET",
+          "path": "/api/sessions/validate/key-current"
+        }
+      },
+      "evidence": [],
+      "role": "reproducer",
+      "sequence": 23
+    },
+    {
+      "action": "tool-invocation",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 7,
+        "reproductionAttempts": 1,
+        "totalTokens": 19971,
+        "totalToolCalls": 5
+      },
+      "details": {
+        "arguments": {
+          "expectations": {
+            "required": {
+              "bodyContains": "session validation failed",
+              "method": "GET",
+              "path": "/api/sessions/validate/key-current",
+              "status": 401
+            },
+            "supporting": {
+              "logContains": [
+                "requested keyId=key-current",
+                "selected keyId=key-retired"
+              ]
+            }
+          },
+          "request": {
+            "method": "GET",
+            "path": "/api/sessions/validate/key-current"
+          }
+        },
+        "tool": "execute_reproduction"
+      },
+      "evidence": [],
+      "role": "orchestrator",
+      "sequence": 24,
+      "tool": "execute_reproduction"
+    },
+    {
+      "action": "tool-result",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 7,
+        "reproductionAttempts": 1,
+        "totalTokens": 19971,
+        "totalToolCalls": 5
+      },
+      "details": {
+        "durationMs": 27.879,
+        "ok": true,
+        "tool": "execute_reproduction",
+        "truncated": false
+      },
+      "evidence": [
+        "evidence-6",
+        "evidence-7"
+      ],
+      "role": "orchestrator",
+      "sequence": 27,
+      "tool": "execute_reproduction"
+    },
+    {
+      "action": "reproduction-result",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 7,
+        "reproductionAttempts": 1,
+        "totalTokens": 19971,
+        "totalToolCalls": 5
+      },
+      "details": {
+        "hypothesisId": "hypothesis-1",
+        "outcome": "reproduced"
+      },
+      "evidence": [
+        "evidence-6",
+        "evidence-7"
+      ],
+      "role": "orchestrator",
+      "sequence": 30
+    },
+    {
+      "action": "role-decision",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 8,
+        "reproductionAttempts": 1,
+        "totalTokens": 26805,
+        "totalToolCalls": 5
+      },
+      "details": {
+        "evidenceIds": [
+          "evidence-1",
+          "evidence-5",
+          "evidence-6",
+          "evidence-7"
+        ],
+        "explanation": "The evidence establishes the proposed selector defect in the matching runtime path. Source shows that `selectSigningKey` ignores `_keyId` and always returns `data.signingKeys[0]`; the first entry is the inactive `key-retired`, while `key-current` is the requested active key and has different material. The matching GET reproduction returns the reported 401 and its correlated structured log records `requestedKeyId: key-current`, `selectedKeyId: key-retired`, followed by `SESSION_SIGNATURE_REJECTED`. This connects the deterministic source defect to the upstream key mismatch at the reproduced failure, rather than merely correlating an unrelated condition. The two supporting text assertions failed only because their expected prose did not match the structured JSON formatting; the requested and selected IDs are nevertheless explicitly present in the captured log.",
+        "hypothesisId": "hypothesis-1",
+        "limitations": [
+          "No post-fix or controlled intervention was run to demonstrate that ID-based key selection changes this request from 401 to acceptance.",
+          "The supplied source excerpt does not show the validation endpoint’s call site or signature-comparison implementation, although the correlated runtime log directly reports the requested/selected key mismatch during signature rejection."
+        ],
+        "missingEvidenceRequest": null,
+        "outcome": "verified",
+        "unsupportedClaims": []
+      },
+      "evidence": [
+        "evidence-1",
+        "evidence-5",
+        "evidence-6",
+        "evidence-7"
+      ],
+      "role": "verifier",
+      "sequence": 31
+    },
+    {
+      "action": "verifier-feedback",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 8,
+        "reproductionAttempts": 1,
+        "totalTokens": 26805,
+        "totalToolCalls": 5
+      },
+      "details": {
+        "evidenceIds": [
+          "evidence-1",
+          "evidence-5",
+          "evidence-6",
+          "evidence-7"
+        ],
+        "explanation": "The evidence establishes the proposed selector defect in the matching runtime path. Source shows that `selectSigningKey` ignores `_keyId` and always returns `data.signingKeys[0]`; the first entry is the inactive `key-retired`, while `key-current` is the requested active key and has different material. The matching GET reproduction returns the reported 401 and its correlated structured log records `requestedKeyId: key-current`, `selectedKeyId: key-retired`, followed by `SESSION_SIGNATURE_REJECTED`. This connects the deterministic source defect to the upstream key mismatch at the reproduced failure, rather than merely correlating an unrelated condition. The two supporting text assertions failed only because their expected prose did not match the structured JSON formatting; the requested and selected IDs are nevertheless explicitly present in the captured log.",
+        "hypothesisId": "hypothesis-1",
+        "limitations": [
+          "No post-fix or controlled intervention was run to demonstrate that ID-based key selection changes this request from 401 to acceptance.",
+          "The supplied source excerpt does not show the validation endpoint’s call site or signature-comparison implementation, although the correlated runtime log directly reports the requested/selected key mismatch during signature rejection."
+        ],
+        "missingEvidenceRequest": null,
+        "outcome": "verified",
+        "unsupportedClaims": []
+      },
+      "evidence": [
+        "evidence-1",
+        "evidence-5",
+        "evidence-6",
+        "evidence-7"
+      ],
+      "role": "verifier",
+      "sequence": 32
+    },
+    {
+      "action": "hypothesis-change",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 8,
+        "reproductionAttempts": 1,
+        "totalTokens": 26805,
+        "totalToolCalls": 5
+      },
+      "details": {
+        "hypothesisId": "hypothesis-1",
+        "status": "supported"
+      },
+      "evidence": [
+        "evidence-1",
+        "evidence-5",
+        "evidence-6",
+        "evidence-7"
+      ],
+      "role": "orchestrator",
+      "sequence": 34
+    },
+    {
+      "action": "termination",
+      "budget": {
+        "activeHypotheses": 1,
+        "investigationRounds": 1,
+        "llmCalls": 8,
+        "reproductionAttempts": 1,
+        "totalTokens": 26805,
+        "totalToolCalls": 5
+      },
+      "details": {
+        "finalStatus": "verified",
+        "reason": "verified"
+      },
+      "evidence": [
+        "evidence-1",
+        "evidence-5",
+        "evidence-6",
+        "evidence-7"
+      ],
+      "role": "orchestrator",
+      "sequence": 35
+    }
+  ]
+}
