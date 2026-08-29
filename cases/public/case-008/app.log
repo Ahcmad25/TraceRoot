@@ -1,0 +1,2 @@
+INFO trace-prod-8001 REQUEST_RECEIVED method=POST path=/api/users/profile
+ERROR trace-prod-8001 PROFILE_UPDATE_VERSION_COLLISION currentVersion=7 attemptedVersions=8,8 updateCount=2

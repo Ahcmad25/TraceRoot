@@ -1,4 +1,3 @@
-import type { Server } from "node:http";
 import { readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { ArtifactLoader } from "./artifacts/loader.js";
@@ -9,6 +8,7 @@ import { OpenAiResponsesProvider } from "./llm/openai-responses-provider.js";
 import type { LlmConfiguration } from "./llm/types.js";
 import { effectiveLlmConfiguration } from "./llm/model-capabilities.js";
 import { createTargetApi } from "./target-api/app.js";
+import { closeTarget, startEphemeralTarget } from "./target-api/server.js";
 import { loadRuntimeScenario } from "./target-api/runtime-map.js";
 import { createExecuteReproductionTool } from "./tools/execute-reproduction.js";
 import { createReadSourceTool } from "./tools/read-source.js";
@@ -30,27 +30,6 @@ async function loadCase(caseId: string | undefined): Promise<CaseArtifacts> {
     throw new Error(`${result.error.code}: ${result.error.message}`);
   }
   return result.artifacts;
-}
-
-function startEphemeralTarget(): Promise<{ server: Server; baseUrl: string }> {
-  const runtime = createTargetApi();
-  return new Promise((resolvePromise, reject) => {
-    const server = runtime.app.listen(0, "127.0.0.1", () => {
-      const address = server.address();
-      if (address === null || typeof address === "string") {
-        reject(new Error("Target API did not expose a TCP address"));
-        return;
-      }
-      resolvePromise({ server, baseUrl: `http://127.0.0.1:${address.port}` });
-    });
-    server.on("error", reject);
-  });
-}
-
-function closeServer(server: Server): Promise<void> {
-  return new Promise((resolvePromise, reject) => {
-    server.close((error) => error === undefined ? resolvePromise() : reject(error));
-  });
 }
 
 function baselineConfiguration(): LlmConfiguration {
@@ -91,7 +70,7 @@ async function executeInvestigation(caseId: string): Promise<boolean> {
     });
     return execution.ok;
   } finally {
-    await closeServer(target.server);
+    await closeTarget(target.server);
   }
 }
 
@@ -205,7 +184,7 @@ async function main(): Promise<void> {
         },
       }));
     } finally {
-      await closeServer(target.server);
+      await closeTarget(target.server);
     }
     return;
   }

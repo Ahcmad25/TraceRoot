@@ -13,3 +13,26 @@ export function registerUser(request: Request, response: Response, state: Target
     response.status(500).json({ error: "user registration failed", requestId });
   }
 }
+
+export function assignProfileUpdateVersions(currentVersion: number, updateCount: number): number[] {
+  return Array.from({ length: updateCount }, () => currentVersion + 1);
+}
+
+export function updateUserProfile(request: Request, response: Response, state: TargetState): void {
+  const requestId = response.locals.requestId as string;
+  const body = request.body as { displayName?: unknown; locale?: unknown };
+  const updateCount = [body.displayName, body.locale].filter((value) => value !== undefined).length;
+  const versions = assignProfileUpdateVersions(state.data().profileVersion, updateCount);
+
+  if (new Set(versions).size !== versions.length) {
+    state.log(requestId, "error", "PROFILE_UPDATE_VERSION_COLLISION", {
+      currentVersion: state.data().profileVersion,
+      attemptedVersions: versions,
+      updateCount,
+    });
+    response.status(409).json({ error: "profile update conflict", requestId });
+    return;
+  }
+
+  response.status(200).json({ applied: updateCount, version: versions.at(-1) ?? state.data().profileVersion });
+}

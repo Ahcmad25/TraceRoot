@@ -1,0 +1,22 @@
+{
+  "id": "case-007",
+  "title": "Invoice calculation failure",
+  "failureReport": {
+    "summary": "Invoice calculation fails when a serialized coupon flag is supplied as the string false.",
+    "endpoint": "/api/orders/invoice",
+    "method": "POST",
+    "observedStatus": 500,
+    "observedError": "invoice calculation failed",
+    "requestContext": {
+      "body": { "subtotal": 100, "couponEnabled": "false" }
+    }
+  },
+  "permittedSourceFiles": [
+    "src/target-api/application-data.ts",
+    "src/target-api/scenarios/account-lookup.ts",
+    "src/target-api/scenarios/order-total.ts",
+    "src/target-api/scenarios/payment-provider.ts",
+    "src/target-api/scenarios/user-registration.ts"
+  ],
+  "initialLogFiles": ["cases/public/case-007/app.log"]
+}

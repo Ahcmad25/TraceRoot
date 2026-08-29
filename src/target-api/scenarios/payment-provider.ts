@@ -19,3 +19,27 @@ export function createPaymentClient(
 
   response.status(200).json({ provider: "sandbox", configured: true });
 }
+
+export function resolvePaymentRetryEndpoint(configuration: Readonly<Record<string, string>>): string | undefined {
+  return configuration.LEGACY_PAYMENT_RETRY_ENDPOINT ?? configuration.PAYMENT_RETRY_ENDPOINT;
+}
+
+export function checkPaymentRetryService(
+  _request: Request,
+  response: Response,
+  state: TargetState,
+): void {
+  const requestId = response.locals.requestId as string;
+  const endpoint = resolvePaymentRetryEndpoint(state.data().configuration);
+
+  if (endpoint === undefined || endpoint.trim() === "") {
+    state.log(requestId, "warn", "PAYMENT_RETRY_ENDPOINT_UNUSABLE", {
+      selectedSource: "legacy",
+      selectedLength: endpoint?.length ?? null,
+    });
+    response.status(503).json({ error: "payment retry service unavailable", requestId });
+    return;
+  }
+
+  response.status(200).json({ available: true });
+}

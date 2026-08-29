@@ -1,0 +1,9 @@
+node_modules
+dist
+coverage
+results
+.git
+.env
+*.log
+!cases/public/**/*.log
+npm-debug.log*

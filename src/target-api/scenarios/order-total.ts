@@ -23,3 +23,32 @@ export function calculateOrderTotal(
 
   response.status(200).json({ total });
 }
+
+export function normalizeCouponEnabled(value: unknown): boolean {
+  return Boolean(value);
+}
+
+export function calculateInvoice(
+  request: Request,
+  response: Response,
+  state: TargetState,
+): void {
+  const requestId = response.locals.requestId as string;
+  const body = request.body as { subtotal?: unknown; couponEnabled?: unknown };
+  const couponEnabled = normalizeCouponEnabled(body.couponEnabled);
+
+  if (couponEnabled) {
+    state.log(requestId, "warn", "COUPON_APPLICATION_REJECTED", {
+      inputType: typeof body.couponEnabled,
+      inputValue: body.couponEnabled,
+      normalizedValue: couponEnabled,
+    });
+    state.log(requestId, "error", "BILLING_METRICS_EXPORT_FAILED", {
+      message: "metrics collector unavailable",
+    });
+    response.status(500).json({ error: "invoice calculation failed", requestId });
+    return;
+  }
+
+  response.status(200).json({ total: body.subtotal });
+}

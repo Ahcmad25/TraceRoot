@@ -1,8 +1,8 @@
 import express, { type Express, type NextFunction, type Request, type Response } from "express";
-import { getAccount } from "./scenarios/account-lookup.js";
-import { calculateOrderTotal } from "./scenarios/order-total.js";
-import { createPaymentClient } from "./scenarios/payment-provider.js";
-import { registerUser } from "./scenarios/user-registration.js";
+import { getAccount, validateSession } from "./scenarios/account-lookup.js";
+import { calculateInvoice, calculateOrderTotal } from "./scenarios/order-total.js";
+import { checkPaymentRetryService, createPaymentClient } from "./scenarios/payment-provider.js";
+import { registerUser, updateUserProfile } from "./scenarios/user-registration.js";
 import { TargetState } from "./state.js";
 import { scenarioIdSchema, type ScenarioId } from "./types.js";
 
@@ -54,6 +54,10 @@ export function createTargetApi(): TargetApiRuntime {
   app.get("/api/payments/provider", (request, response) => createPaymentClient(request, response, state));
   app.post("/api/orders/total", (request, response) => calculateOrderTotal(request, response, state));
   app.get("/api/accounts/:externalId", (request, response) => getAccount(request, response, state));
+  app.get("/api/sessions/validate/:keyId", (request, response) => validateSession(request, response, state));
+  app.get("/api/payments/retry-health", (request, response) => checkPaymentRetryService(request, response, state));
+  app.post("/api/orders/invoice", (request, response) => calculateInvoice(request, response, state));
+  app.post("/api/users/profile", (request, response) => updateUserProfile(request, response, state));
 
   app.use((_request, response) => {
     response.status(404).json({ error: "not found" });

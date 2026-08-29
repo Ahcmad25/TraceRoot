@@ -1,0 +1,13 @@
+{
+  "caseId": "case-005",
+  "category": "authentication",
+  "sourceFile": "src/target-api/application-data.ts",
+  "symbol": "selectSigningKey",
+  "causalMechanism": "selectSigningKey ignores the requested key ID and always returns the first seeded signing key, causing a token naming the active key to be checked against a retired key.",
+  "expectedFailure": {
+    "status": 401,
+    "bodyContains": "session validation failed",
+    "logContains": ["SESSION_SIGNATURE_REJECTED", "selectedKeyId"]
+  },
+  "notes": "The endpoint reports the authentication symptom, while the defective selection policy resides in the shared application-data module."
+}

@@ -1,0 +1,2 @@
+INFO trace-prod-6001 REQUEST_RECEIVED method=GET path=/api/payments/retry-health
+WARN trace-prod-6001 PAYMENT_RETRY_ENDPOINT_UNUSABLE selectedSource=legacy selectedLength=0

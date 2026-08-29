@@ -1,0 +1,13 @@
+{
+  "caseId": "case-008",
+  "category": "concurrency",
+  "sourceFile": "src/target-api/scenarios/user-registration.ts",
+  "symbol": "assignProfileUpdateVersions",
+  "causalMechanism": "assignProfileUpdateVersions derives every update version from the same initial snapshot, assigning duplicate version 8 to both operations instead of advancing the optimistic version per update.",
+  "expectedFailure": {
+    "status": 409,
+    "bodyContains": "profile update conflict",
+    "logContains": ["PROFILE_UPDATE_VERSION_COLLISION", "attemptedVersions"]
+  },
+  "notes": "The deterministic batch models a lost-update/version-allocation defect without relying on nondeterministic scheduling."
+}

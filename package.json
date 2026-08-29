@@ -20,7 +20,9 @@
     "tool:reproduce": "tsx src/cli.ts tool:reproduce",
     "baseline": "tsx src/cli.ts baseline",
     "baseline:all": "tsx src/cli.ts baseline:all",
-    "investigate": "tsx src/cli.ts investigate"
+    "investigate": "tsx src/cli.ts investigate",
+    "evaluate": "tsx src/evaluation/cli.ts",
+    "evaluate:all": "tsx src/evaluation/cli.ts --all"
   },
   "dependencies": {
     "express": "^5.1.0",

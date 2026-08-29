@@ -1,0 +1,20 @@
+{
+  "id": "case-005",
+  "title": "Session validation failure",
+  "failureReport": {
+    "summary": "A session signed with the currently issued key is rejected by the validation endpoint.",
+    "endpoint": "/api/sessions/validate/key-current",
+    "method": "GET",
+    "observedStatus": 401,
+    "observedError": "session validation failed",
+    "requestContext": { "keyId": "key-current" }
+  },
+  "permittedSourceFiles": [
+    "src/target-api/application-data.ts",
+    "src/target-api/scenarios/account-lookup.ts",
+    "src/target-api/scenarios/order-total.ts",
+    "src/target-api/scenarios/payment-provider.ts",
+    "src/target-api/scenarios/user-registration.ts"
+  ],
+  "initialLogFiles": ["cases/public/case-005/app.log"]
+}

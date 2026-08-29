@@ -5,6 +5,10 @@ export const scenarioIdSchema = z.enum([
   "scenario-002",
   "scenario-003",
   "scenario-004",
+  "scenario-005",
+  "scenario-006",
+  "scenario-007",
+  "scenario-008",
 ]);
 
 export type ScenarioId = z.infer<typeof scenarioIdSchema>;

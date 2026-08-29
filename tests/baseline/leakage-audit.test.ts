@@ -6,7 +6,10 @@ import { failureCaseSchema } from "../../src/domain/case.js";
 import { loadRuntimeScenario } from "../../src/target-api/runtime-map.js";
 
 const workspaceRoot = resolve(".");
-const caseIds = ["case-001", "case-002", "case-003", "case-004"] as const;
+const caseIds = [
+  "case-001", "case-002", "case-003", "case-004",
+  "case-005", "case-006", "case-007", "case-008",
+] as const;
 const forbiddenModelVisibleLabels = [
   "missing-profile-validation",
   "misnamed-payment-config",
@@ -22,6 +25,10 @@ const forbiddenModelVisibleLabels = [
   "scenario-002",
   "scenario-003",
   "scenario-004",
+  "scenario-005",
+  "scenario-006",
+  "scenario-007",
+  "scenario-008",
   "/__control/",
 ];
 
@@ -89,5 +96,14 @@ describe("Phase 3.5 benchmark leakage boundary", () => {
     const loaded = await new ArtifactLoader(workspaceRoot).load("case-001");
     if (!loaded.ok) throw new Error(loaded.error.message);
     expect(JSON.stringify(loaded.artifacts)).not.toContain("scenario-001");
+  });
+
+  it("does not expose benchmark-internal or hidden expectation fields in any public manifest", async () => {
+    for (const caseId of caseIds) {
+      const loaded = await new ArtifactLoader(workspaceRoot).load(caseId);
+      if (!loaded.ok) throw new Error(loaded.error.message);
+      const serialized = serializeBaselineArtifacts(loaded.artifacts).toLocaleLowerCase("en-US");
+      expect(serialized).not.toMatch(/ground.?truth|runtime.?map|scenario-\d{3}|expectedfailure|causalmechanism|"sourcefile"\s*:|"symbol"\s*:/iu);
+    }
   });
 });

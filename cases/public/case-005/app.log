@@ -1,0 +1,2 @@
+INFO trace-prod-5001 REQUEST_RECEIVED method=GET path=/api/sessions/validate/key-current
+WARN trace-prod-5001 SESSION_SIGNATURE_REJECTED requestedKeyId=key-current selectedKeyId=key-retired

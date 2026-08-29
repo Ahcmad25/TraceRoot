@@ -6,14 +6,17 @@ import { failureCaseSchema, groundTruthSchema } from "../../src/domain/case.js";
 const publicRoot = resolve("cases/public");
 const groundTruthRoot = resolve("cases/ground-truth");
 
-describe("Phase 1 case fixtures", () => {
-  it("contains exactly four valid cases with matching hidden ground truth", () => {
+describe("benchmark case fixtures", () => {
+  it("contains exactly eight valid cases with matching hidden ground truth", () => {
     const caseDirectories = readdirSync(publicRoot, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name)
       .sort();
 
-    expect(caseDirectories).toEqual(["case-001", "case-002", "case-003", "case-004"]);
+    expect(caseDirectories).toEqual([
+      "case-001", "case-002", "case-003", "case-004",
+      "case-005", "case-006", "case-007", "case-008",
+    ]);
 
     for (const caseId of caseDirectories) {
       const fixture = failureCaseSchema.parse(JSON.parse(
@@ -30,6 +33,10 @@ describe("Phase 1 case fixtures", () => {
       }
       for (const logFile of fixture.initialLogFiles) {
         expect(existsSync(resolve(logFile)), `${logFile} should exist`).toBe(true);
+      }
+      const body = fixture.failureReport.requestContext.body;
+      if (typeof body === "object" && body !== null && !Array.isArray(body)) {
+        expect(Object.values(body).every((value) => value === null || ["string", "number", "boolean"].includes(typeof value)), `${caseId} body should fit the frozen bounded Reproducer encoding`).toBe(true);
       }
     }
   });

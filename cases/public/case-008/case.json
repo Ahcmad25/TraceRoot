@@ -1,0 +1,22 @@
+{
+  "id": "case-008",
+  "title": "Profile update conflict",
+  "failureReport": {
+    "summary": "A request containing two valid profile field updates returns a version conflict.",
+    "endpoint": "/api/users/profile",
+    "method": "POST",
+    "observedStatus": 409,
+    "observedError": "profile update conflict",
+    "requestContext": {
+      "body": { "displayName": "Ada Lovelace", "locale": "en-PH" }
+    }
+  },
+  "permittedSourceFiles": [
+    "src/target-api/application-data.ts",
+    "src/target-api/scenarios/account-lookup.ts",
+    "src/target-api/scenarios/order-total.ts",
+    "src/target-api/scenarios/payment-provider.ts",
+    "src/target-api/scenarios/user-registration.ts"
+  ],
+  "initialLogFiles": ["cases/public/case-008/app.log"]
+}

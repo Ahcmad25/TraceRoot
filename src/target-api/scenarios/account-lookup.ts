@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { selectSigningKey } from "../application-data.js";
 import type { TargetState } from "../state.js";
 
 export function findAccountByExternalId(externalId: string, state: TargetState) {
@@ -33,4 +34,22 @@ export function getAccount(request: Request, response: Response, state: TargetSt
   }
 
   response.status(200).json(account);
+}
+
+export function validateSession(request: Request, response: Response, state: TargetState): void {
+  const requestId = response.locals.requestId as string;
+  const rawKeyId = request.params.keyId;
+  const requestedKeyId = Array.isArray(rawKeyId) ? rawKeyId[0] ?? "" : rawKeyId ?? "";
+  const selectedKey = selectSigningKey(requestedKeyId, state.data());
+
+  if (selectedKey === undefined || selectedKey.id !== requestedKeyId || !selectedKey.active) {
+    state.log(requestId, "warn", "SESSION_SIGNATURE_REJECTED", {
+      requestedKeyId,
+      selectedKeyId: selectedKey?.id ?? null,
+    });
+    response.status(401).json({ error: "session validation failed", requestId });
+    return;
+  }
+
+  response.status(200).json({ valid: true, keyId: selectedKey.id });
 }

@@ -1,0 +1,20 @@
+{
+  "id": "case-006",
+  "title": "Payment retry health failure",
+  "failureReport": {
+    "summary": "The payment retry health route reports the service unavailable even though a sandbox endpoint is configured.",
+    "endpoint": "/api/payments/retry-health",
+    "method": "GET",
+    "observedStatus": 503,
+    "observedError": "payment retry service unavailable",
+    "requestContext": {}
+  },
+  "permittedSourceFiles": [
+    "src/target-api/application-data.ts",
+    "src/target-api/scenarios/account-lookup.ts",
+    "src/target-api/scenarios/order-total.ts",
+    "src/target-api/scenarios/payment-provider.ts",
+    "src/target-api/scenarios/user-registration.ts"
+  ],
+  "initialLogFiles": ["cases/public/case-006/app.log"]
+}

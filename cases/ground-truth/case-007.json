@@ -1,0 +1,13 @@
+{
+  "caseId": "case-007",
+  "category": "type-coercion",
+  "sourceFile": "src/target-api/scenarios/order-total.ts",
+  "symbol": "normalizeCouponEnabled",
+  "causalMechanism": "normalizeCouponEnabled applies Boolean to the non-empty string false, coercing it to true and entering coupon application unexpectedly.",
+  "expectedFailure": {
+    "status": 500,
+    "bodyContains": "invoice calculation failed",
+    "logContains": ["COUPON_APPLICATION_REJECTED", "BILLING_METRICS_EXPORT_FAILED"]
+  },
+  "notes": "The later metrics-export error is secondary; the earlier coercion observation identifies the causal request boundary."
+}

@@ -1,0 +1,13 @@
+{
+  "caseId": "case-006",
+  "category": "configuration",
+  "sourceFile": "src/target-api/scenarios/payment-provider.ts",
+  "symbol": "resolvePaymentRetryEndpoint",
+  "causalMechanism": "resolvePaymentRetryEndpoint uses nullish precedence for the legacy setting, so a present but empty legacy value wins over the valid primary retry endpoint.",
+  "expectedFailure": {
+    "status": 503,
+    "bodyContains": "payment retry service unavailable",
+    "logContains": ["PAYMENT_RETRY_ENDPOINT_UNUSABLE", "selectedSource"]
+  },
+  "notes": "The configured primary value is valid; selection precedence, rather than absence of configuration, causes the failure."
+}

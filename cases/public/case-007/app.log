@@ -1,0 +1,3 @@
+INFO trace-prod-7001 REQUEST_RECEIVED method=POST path=/api/orders/invoice
+WARN trace-prod-7001 COUPON_APPLICATION_REJECTED inputType=string inputValue=false normalizedValue=true
+ERROR trace-prod-7001 BILLING_METRICS_EXPORT_FAILED message="metrics collector unavailable"
