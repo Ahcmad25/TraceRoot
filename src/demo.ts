@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { ArtifactLoader } from "./artifacts/loader.js";
 import { runInvestigation, type AgenticRunnerResult } from "./agentic/runner.js";
+import { safeDemoFailureReason } from "./demo-diagnostics.js";
 import { OpenAiResponsesProvider } from "./llm/openai-responses-provider.js";
 import { effectiveLlmConfiguration } from "./llm/model-capabilities.js";
 import { closeTarget, startEphemeralTarget } from "./target-api/server.js";
@@ -55,6 +56,11 @@ async function main(): Promise<void> {
     });
     if (!execution.ok) throw new Error(`${execution.error.code}: ${execution.error.message}`);
     describeCompletedInvestigation(execution);
+    const safeFailureReason = safeDemoFailureReason(
+      execution.result.terminationReason,
+      execution.trajectory.investigation.events,
+    );
+    if (safeFailureReason !== null) console.log(`[provider] ${safeFailureReason}`);
     console.log(`[final] ${execution.result.diagnosis.status} — ${execution.result.terminationReason}`);
     console.log(`[usage] LLM calls: ${execution.result.llmCallCount}; tools: ${execution.result.toolCallCount}; tokens: ${execution.result.tokenUsage.totalTokens}`);
   } finally {
