@@ -8,6 +8,11 @@ TraceRoot — Evidence-backed API failure investigation
 
 TraceRoot turns an API failure report into a bounded, reproducible investigation with source evidence, a controlled runtime experiment, and an independently verified diagnosis.
 
+## Demo
+
+Watch the TraceRoot demo on YouTube:
+[https://youtu.be/-OdVg0Ldw_Q](https://youtu.be/-OdVg0Ldw_Q)
+
 ## Problem
 
 Backend developers often start with an error report, a large source surface, and logs whose loudest message may be secondary. One-shot LLM answers can be useful hypotheses, but they cannot establish that a request actually follows the claimed causal path.

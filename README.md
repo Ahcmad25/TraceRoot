@@ -6,7 +6,12 @@ TraceRoot is a bounded agentic API failure investigator that turns a failure rep
 
 The one-shot baseline has no runtime verification capability by design. The 95.8% verification result is therefore **not** a direct accuracy uplift over baseline, and TraceRoot did not consistently improve strict static localization accuracy in this benchmark.
 
-## Demo and result highlights
+## Demo
+
+Watch the TraceRoot demo on YouTube:
+[https://youtu.be/-OdVg0Ldw_Q](https://youtu.be/-OdVg0Ldw_Q)
+
+## Result highlights
 
 Run the representative case-004 investigation:
 
